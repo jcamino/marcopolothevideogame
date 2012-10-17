@@ -5,7 +5,8 @@ from direct.actor.Actor import Actor #for animated models
 from direct.interval.IntervalGlobal import * #for compound intervals
 from direct.task import Task #for update functions
 from direct.gui.OnscreenText import OnscreenText
-from panda3d.core import Shader
+from direct.distributed.PyDatagram import PyDatagram 
+from direct.distributed.PyDatagramIterator import PyDatagramIterator
 import math, sys, random
 
 class Game(DirectObject):
@@ -19,8 +20,10 @@ class Game(DirectObject):
         taskMgr.add(self.move_player, "moveTask",priority=1)
         taskMgr.add(self.move_camera, "cameraTask",priority=5)
         taskMgr.add(self.update_prev_time, "timeTask",priority=6)
-        taskMgr.add(self.update_obstacles, "obstacles",priority=2)
-        taskMgr.add(self.update_terrain, "terrain", priority=3)
+        taskMgr.add(self.update_obstacles, "obstacleUpdateTask",priority=2)
+        taskMgr.add(self.update_terrain, "terrainUpdateTask", priority=3)
+        taskMgr.add(listenerPolling, "connectionOpener", priority=4)
+        taskMgr.add(readerPolling, "connectionOpener", priority=4)
         
         self.accept("escape", sys.exit)
         self.accept("arrow_up", self.setKey, ["forward", True])
@@ -36,12 +39,28 @@ class Game(DirectObject):
         
         self.load_assets()
         self.setup_collision()
+        self.setupNetworking()
         
         self.headlightson = True
         self.playerHits = 0
         
         self.hpPrompt = OnscreenText(text = 'HitPoints:', pos = (-0.55, -0.2), scale = 0.07)
         self.hpText = OnscreenText(text = str(10-self.playerHits), pos = (-0.35, -0.2), scale = 0.07)
+        
+    def setup_networking(self)
+        #Basic networking manager
+        self.cManager = QueuedConnectionManager()
+         
+        #Listens for new connections and queue's them 
+        self.cListener = QueuedConnectionListener(self.cManager, 0) 
+
+        #Reads data send to the server 
+        self.cReader = QueuedConnectionReader(self.cManager, 0) 
+
+        #Writes / sends data to the client 
+        self.cWriter = ConnectionWriter(self.cManager,0)
+         
+         self.connections = []
         
     def load_assets(self):
     
@@ -233,6 +252,29 @@ class Game(DirectObject):
         self.terrain.setY(((self.terrain.getY()-0.5))%100)
         
         return task.cont
+        
+         
+    def listenerPolling(task):
+        if self.cListener.newConnectionAvailable():
+            rendezvous = PointerToConnection()
+            netAddress = NetAddress()
+            newConnection = PointerToConnection()
+     
+        if self.cListener.getNewConnection(rendezvous,netAddress,newConnection):
+            newConnection = newConnection.p()
+            activeConnections.append(newConnection) # Remember connection
+            self.cReader.addConnection(newConnection)     # Begin reading connection
+        return task.cont
+      
+    def readerPolling(task):
+        if self.cReader.dataAvailable():
+            data = NetDatagram()
+            if self.cReader.getData(data):
+                self.processNetworkingData(data)
+        return task.cont
+        
+    def processNetworkingData(data):
+        print data
         
     def setKey(self,key,value):
         self.keyMap[key] = value
