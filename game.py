@@ -22,8 +22,8 @@ class Game(DirectObject):
         taskMgr.add(self.update_prev_time, "timeTask",priority=6)
         taskMgr.add(self.update_obstacles, "obstacleUpdateTask",priority=2)
         taskMgr.add(self.update_terrain, "terrainUpdateTask", priority=3)
-        taskMgr.add(listenerPolling, "connectionOpener", priority=4)
-        taskMgr.add(readerPolling, "connectionOpener", priority=4)
+        taskMgr.add(self.listenerPolling, "connectionOpener", priority=4)
+        taskMgr.add(self.readerPolling, "connectionOpener", priority=4)
         
         self.accept("escape", sys.exit)
         self.accept("arrow_up", self.setKey, ["forward", True])
@@ -39,7 +39,7 @@ class Game(DirectObject):
         
         self.load_assets()
         self.setup_collision()
-        self.setupNetworking()
+        self.setup_networking()
         
         self.headlightson = True
         self.playerHits = 0
@@ -47,7 +47,7 @@ class Game(DirectObject):
         self.hpPrompt = OnscreenText(text = 'HitPoints:', pos = (-0.55, -0.2), scale = 0.07)
         self.hpText = OnscreenText(text = str(10-self.playerHits), pos = (-0.35, -0.2), scale = 0.07)
         
-    def setup_networking(self)
+    def setup_networking(self):
         #Basic networking manager
         self.cManager = QueuedConnectionManager()
          
@@ -60,7 +60,7 @@ class Game(DirectObject):
         #Writes / sends data to the client 
         self.cWriter = ConnectionWriter(self.cManager,0)
          
-         self.connections = []
+        self.connections = []
         
     def load_assets(self):
     
@@ -254,26 +254,27 @@ class Game(DirectObject):
         return task.cont
         
          
-    def listenerPolling(task):
+    def listenerPolling(self,task):
         if self.cListener.newConnectionAvailable():
             rendezvous = PointerToConnection()
+            print rendezvous
             netAddress = NetAddress()
             newConnection = PointerToConnection()
      
-        if self.cListener.getNewConnection(rendezvous,netAddress,newConnection):
-            newConnection = newConnection.p()
-            activeConnections.append(newConnection) # Remember connection
-            self.cReader.addConnection(newConnection)     # Begin reading connection
+            if self.cListener.getNewConnection(rendezvous,netAddress,newConnection):
+                newConnection = newConnection.p()
+                activeConnections.append(newConnection) # Remember connection
+                self.cReader.addConnection(newConnection)     # Begin reading connection
         return task.cont
       
-    def readerPolling(task):
+    def readerPolling(self,task):
         if self.cReader.dataAvailable():
             data = NetDatagram()
             if self.cReader.getData(data):
                 self.processNetworkingData(data)
         return task.cont
         
-    def processNetworkingData(data):
+    def processNetworkingData(self,data):
         print data
         
     def setKey(self,key,value):
