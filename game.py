@@ -233,13 +233,13 @@ class Game(DirectObject):
         
         for i in range(0,20-len(self.obstacles)):
             if random.randint(0,1) == 1:
-                obstacle = loader.loadModel("electron")
+                obstacle = loader.loadModel("models/electron.egg")
                 obstacle.setScale(.5)
                 obstacle.setPos(random.randint(-20, 20), random.randint(100, 200), 0)
                 obstacle.setName("electron")
                 cNode = CollisionNode("electron")
             else:
-                obstacle = loader.loadModel("Neutron")
+                obstacle = loader.loadModel("models/Neutron.egg")
                 obstacle.setScale(.5)
                 obstacle.setPos(random.randint(-20, 20), random.randint(100, 200), 2)
                 obstacle.setName("neutron")
