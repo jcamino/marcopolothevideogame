@@ -7,7 +7,7 @@ from direct.task import Task #for update functions
 from direct.gui.OnscreenText import OnscreenText
 from direct.distributed.PyDatagram import PyDatagram 
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
-import math, sys, random
+import math, sys, random,socket
 
 class Game(DirectObject):
     
@@ -22,8 +22,8 @@ class Game(DirectObject):
         taskMgr.add(self.update_prev_time, "timeTask",priority=6)
         taskMgr.add(self.update_obstacles, "obstacleUpdateTask",priority=2)
         taskMgr.add(self.update_terrain, "terrainUpdateTask", priority=3)
-        taskMgr.add(listenerPolling, "connectionOpener", priority=4)
-        taskMgr.add(readerPolling, "connectionOpener", priority=4)
+        taskMgr.add(self.listenerPolling, "connectionOpener", priority=4)
+        taskMgr.add(self.readerPolling, "connectionOpener", priority=4)
         
         self.accept("escape", sys.exit)
         self.accept("arrow_up", self.setKey, ["forward", True])
@@ -39,7 +39,7 @@ class Game(DirectObject):
         
         self.load_assets()
         self.setup_collision()
-        self.setupNetworking()
+        self.setup_networking()
         
         self.headlightson = True
         self.playerHits = 0
@@ -47,21 +47,18 @@ class Game(DirectObject):
         self.hpPrompt = OnscreenText(text = 'HitPoints:', pos = (-0.55, -0.2), scale = 0.07)
         self.hpText = OnscreenText(text = str(10-self.playerHits), pos = (-0.35, -0.2), scale = 0.07)
         
-    def setup_networking(self)
-        #Basic networking manager
-        self.cManager = QueuedConnectionManager()
-         
-        #Listens for new connections and queue's them 
-        self.cListener = QueuedConnectionListener(self.cManager, 0) 
-
-        #Reads data send to the server 
-        self.cReader = QueuedConnectionReader(self.cManager, 0) 
-
-        #Writes / sends data to the client 
-        self.cWriter = ConnectionWriter(self.cManager,0)
-         
-         self.connections = []
+    def setup_networking(self):
         
+        self.s = socket.socket()         # Create a socket object
+        host = "128.113.232.203" # Get local machine name
+        port = 9099                # Reserve a port for your service.
+
+        self.s.connect((host, port))
+        
+                           # Close the socket when done
+                  
+        #self.cWriter.send("aaa",self.myConnection)        
+                
     def load_assets(self):
     
         #Loads the plain, throws it into the scene graph and then scales it
@@ -254,26 +251,29 @@ class Game(DirectObject):
         return task.cont
         
          
-    def listenerPolling(task):
+    def listenerPolling(self,task):
+        print "trying to send stuff"
+        print self.s.send('WOOT')
+        print "sending data"
+        
+        '''
         if self.cListener.newConnectionAvailable():
             rendezvous = PointerToConnection()
+            print rendezvous
             netAddress = NetAddress()
             newConnection = PointerToConnection()
      
-        if self.cListener.getNewConnection(rendezvous,netAddress,newConnection):
-            newConnection = newConnection.p()
-            activeConnections.append(newConnection) # Remember connection
-            self.cReader.addConnection(newConnection)     # Begin reading connection
+            if self.cListener.getNewConnection(rendezvous,netAddress,newConnection):
+                newConnection = newConnection.p()
+                activeConnections.append(newConnection) # Remember connection
+                self.cReader.addConnection(newConnection)     # Begin reading connection'''
         return task.cont
       
-    def readerPolling(task):
-        if self.cReader.dataAvailable():
-            data = NetDatagram()
-            if self.cReader.getData(data):
-                self.processNetworkingData(data)
+    def readerPolling(self,task):
+        print "blah"
         return task.cont
         
-    def processNetworkingData(data):
+    def processNetworkingData(self,data):
         print data
         
     def setKey(self,key,value):
