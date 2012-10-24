@@ -7,7 +7,7 @@ from direct.task import Task #for update functions
 from direct.gui.OnscreenText import OnscreenText
 from direct.distributed.PyDatagram import PyDatagram 
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
-import math, sys, random
+import math, sys, random, socket
 
 class Game(DirectObject):
     
@@ -50,7 +50,7 @@ class Game(DirectObject):
     def setup_networking(self):
         #Basic networking manager
         self.cManager = QueuedConnectionManager()
-         
+        
         #Listens for new connections and queue's them 
         self.cListener = QueuedConnectionListener(self.cManager, 0) 
 
@@ -59,7 +59,7 @@ class Game(DirectObject):
 
         #Writes / sends data to the client 
         self.cWriter = ConnectionWriter(self.cManager,0)
-         
+        
         self.connections = []
         
     def load_assets(self):
@@ -260,18 +260,19 @@ class Game(DirectObject):
             print rendezvous
             netAddress = NetAddress()
             newConnection = PointerToConnection()
-     
+            
             if self.cListener.getNewConnection(rendezvous,netAddress,newConnection):
                 newConnection = newConnection.p()
                 activeConnections.append(newConnection) # Remember connection
                 self.cReader.addConnection(newConnection)     # Begin reading connection
-        return task.cont
+
       
     def readerPolling(self,task):
         if self.cReader.dataAvailable():
             data = NetDatagram()
             if self.cReader.getData(data):
                 self.processNetworkingData(data)
+
         return task.cont
         
     def processNetworkingData(self,data):
