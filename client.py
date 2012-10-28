@@ -1,287 +1,213 @@
-from pandac.PandaModules import * 
-import direct.directbase.DirectStart 
-from direct.distributed.PyDatagram import PyDatagram 
-from direct.distributed.PyDatagramIterator import PyDatagramIterator 
+from direct.showbase.ShowBase import ShowBase
+from panda3d.core import *
+from direct.distributed.PyDatagram import PyDatagram
+from direct.distributed.PyDatagramIterator import PyDatagramIterator
+from time import time
+import random
 
-from direct.gui.DirectGui import * 
-import sys 
-
-
-######################################3 
-## 
-## Config 
-## 
-
-IP = '127.0.0.1' 
-PORT = 9099 
-USERNAME = "yellow" 
-PASSWORD = "mypass" 
-
-
-######################################3 
-## 
-## Defines 
-## 
-## Quote Yellow: This are server opcodes. It tells the server 
-## or client what pkt it is receiving. Ie if the pkt starts 
-## with 3, the server knows he has to deal with a chat msg 
-
-MSG_NONE            = 0 
-CMSG_AUTH           = 1 
-SMSG_AUTH_RESPONSE  = 2 
-CMSG_CHAT           = 3 
-SMSG_CHAT           = 4 
-CMSG_DISCONNECT_REQ = 5 
-SMSG_DISCONNECT_ACK = 6 
-
-class Client(DirectObject): 
-    def __init__(self): 
-        self.accept("escape", self.sendMsgDisconnectReq) 
+class Application(ShowBase):
+    def __init__(self):
         
-        # Create network layer objects 
-   ## This is madatory code. Don't ask for now, just use it ;) 
-   ## If something is unclear, just ask. 
-    
-    self.cManager = QueuedConnectionManager() 
-        self.cListener = QueuedConnectionListener(self.cManager, 0) 
-        self.cReader = QueuedConnectionReader(self.cManager, 0) 
-        self.cWriter = ConnectionWriter(self.cManager,0) 
+        ShowBase.__init__(self)
+        
+        #server = Server(Protocol(), 9999)
+        
+        self.smiley = loader.loadModel("smiley")
+        self.smiley.setPythonTag("velocity", 0)
+        self.smiley.reparentTo(render)
+        self.smiley.setPos(0, 0, 30)
+        self.cam.setPos(0, -100, 10)
+        
+        client = Client(ClientProtocol(self.smiley))
+        client.connect("localhost", 9999, 3000)
+        
+        #taskMgr.add(self.updateSmiley, "updateSmiley")
+        
+        '''
+        print "Starting server"
+        ShowBase.__init__(self)
+        
+        #server = Server(ServerProtocol(), 9999)
+                    
+        
+        client = Client(ClientProtocol())
+        client.connect("128.113.232.77", 9999, 3000)
+        data = PyDatagram()
+        data.addUint8(0)
+        data.addString(str(time()))
+        client.send(data)
+        
+        
+      
+        while True:
+            inputString = raw_input('\t:')
+            #print inputString
+            reply = PyDatagram()
+            reply.addUint8(0)
+            reply.addString(str(time()))
+            client.send(reply)
+        '''
 
-        self.Connection = self.cManager.openTCPClientConnection(IP, PORT,1) 
-        self.cReader.addConnection(self.Connection) 
+    def updateSmiley(self, task):
+        #print "Updating client smiley"
+        vel = self.smiley.getPythonTag("velocity")
+        z = self.smiley.getZ()
+        
+        if z <= 0:
+            vel = random.uniform(0.1, 0.8)
+        
+        self.smiley.setZ(z + vel)
+        self.smiley.setX(20)
+        vel -= 0.01
+        self.smiley.setPythonTag("velocity", vel)
+        
+        return task.cont
 
-        # Start tasks 
-        taskMgr.add(self.readTask, "serverReaderPollTask", -39) 
+class NetCommon:
+    def __init__(self, protocol):
+        self.manager = ConnectionManager()
+        self.reader = QueuedConnectionReader(self.manager, 0)
+        self.writer = ConnectionWriter(self.manager, 0)
+        self.protocol = protocol
+        taskMgr.add(self.updateReader, "updateReader")
+        
+    def updateReader(self, task):
+        if self.reader.dataAvailable():
+            data = NetDatagram()
+            self.reader.getData(data)
+            reply = self.protocol.process(data)
+        
+            if reply != None:
+                self.writer.send(reply, data.getConnection())
+       
+        return task.cont
 
-        # Send login msg to the server 
-   ## required to get the whole thing running. 
-        self.sendMsgAuth() 
 
-    ######################################## 
-    ## 
-    ## Addition: 
-    ## If in doubt, don't change the following. Its working. 
-    ## Here are the basic networking code pieces. 
-    ## If you have questions, ask... 
-    ## 
-    
-    def readTask(self, task): 
-        while 1: 
-            (datagram, data, msgID) = self.nonBlockingRead(self.cReader) 
-            if msgID is MSG_NONE: 
-                break 
-            else: 
-                self.handleDatagram(data, msgID) 
+class Server(NetCommon):
+    def __init__(self, protocol, port):
+        NetCommon.__init__(self, protocol)
+        self.listener = QueuedConnectionListener(self.manager, 0)
+        socket = self.manager.openTCPServerRendezvous(port, 100)
+        self.listener.addConnection(socket)
+        self.connections = []
+        self.smiley = ServerSmiley()
+        self.frowney = loader.loadModel("frowney")
+        self.frowney.reparentTo(render)
+        taskMgr.add(self.updateListener, "updateListener")
+        taskMgr.add(self.updateSmiley, "updateSmiley")
+        taskMgr.doMethodLater(0.1, self.syncSmiley, "syncSmiley")
+        
+    def updateListener(self, task):
+        if self.listener.newConnectionAvailable():
+            connection = PointerToConnection()
+            if self.listener.getNewConnection(connection):
+                connection = connection.p()
+                self.connections.append(connection)
+                self.reader.addConnection(connection)
+                print "Server: New connection established."
                 
-        return Task.cont 
-
-    def nonBlockingRead(self,qcr): 
-        """ 
-        Return a datagram iterator and type if data is available on the 
-        queued connection reader 
-        """ 
-        if self.cReader.dataAvailable(): 
-            datagram = NetDatagram() 
-            if self.cReader.getData(datagram): 
-                data = PyDatagramIterator(datagram) 
-                msgID = data.getUint16() 
-            else: 
-                data = None 
-                msgID = MSG_NONE 
-        else: 
-            datagram = None 
-            data = None 
-            msgID = MSG_NONE 
-        # Note, return datagram to keep a handle on the data 
-        return (datagram, data, msgID) 
-
-    def handleDatagram(self, data, msgID): 
-        """ 
-        Check if there's a handler assigned for this msgID. 
-        Since we dont have case statements in python, 
-        we're using a dictionary to avoid endless elif statements. 
-        """ 
-    
-   ######################################################## 
-   ## 
-   ## Of course you can use as an alternative smth like this: 
-   ## if msgID == CMSG_AUTH: self.msgAuth(msgID, data, client) 
-   ## elif... 
-    
-        if msgID in Handlers.keys(): 
-            Handlers[msgID](msgID,data) 
-        else: 
-            print "Unknown msgID: %d" % msgID 
-            print data 
-        return        
-
-    def sendMsgAuth(self): 
+                
+        return task.cont
         
-   ######################################################### 
-   ## 
-   ## This handles the sending of the auth request. 
-   ## 
-    
-   ## 1st. We need to create a buffer 
-   pkg = PyDatagram() 
+    def updateSmiley(self, task):
+        self.smiley.update()
+        self.frowney.setPos(self.smiley.pos)
+        return task.cont
         
-   ## 2nd. We put a UInt16 type Number in it. Here its CMSG_AUTH 
-   ## what means that the corresponding Value is "1" 
-   pkg.addUint16(CMSG_AUTH) 
+    def syncSmiley(self, task):
+        print "SYNCING SMILEYS!"
+        sync = PyDatagram()
+        sync.addFloat32(self.smiley.vel)
+        sync.addFloat32(self.smiley.pos.getZ())
+        self.broadcast(sync)
+        return task.again
     
-   ## 3rd. We add the username to the buffer after the UInt. 
-        pkg.addString(USERNAME) 
-    
-   ## 4th. We add the password for the username after the username 
-        pkg.addString(PASSWORD) 
-    
-   ## Now that we have a Buffer consisting of a Number and 2 Strings 
-   ## we can send it. 
-        self.send(pkg) 
-
-    def sendMsgDisconnectReq(self): 
-        ##################################################### 
-   ## 
-   ## This is not used right now, but can be used to tell the 
-   ## server that the client is disconnecting cleanly. 
-   ## 
-   pkg = PyDatagram() 
+    def broadcast(self, datagram):
+        for conn in self.connections:
+            self.writer.send(datagram, conn)
         
-   ## Will be a short paket... we are just sending 
-   ## the Code for disconnecting. The server doesn't 
-   ## need more information anyways... 
-   pkg.addUint16(CMSG_DISCONNECT_REQ) 
-        self.send(pkg) 
-
-    def msgAuthResponse(self, msgID, data): 
         
-    ################################################## 
-    ## 
-    ## Here we are going to compare the auth response 
-    ## we got from the server. Yellow kept it short, but 
-    ## if the server sends a 0 here, it means, the User 
-    ## doesn't exist. 1 means: user/pwd combination 
-    ## successfull. If the server sends a 2: Wrong PWD. 
-    ## Note that its a security risk to do so. That way 
-    ## you can easily spy for existing users and then 
-    ## check for their passwords, but its a good example 
-    ## to show, how what is working. 
+class Client(NetCommon):
+    def __init__(self, protocol):
+        NetCommon.__init__(self, protocol)
     
-   flag = data.getUint32() 
-        if flag == 0: 
-            print "Unknown user" 
-        
-        if flag == 2: 
-            print "Wrong pass, please try again..." 
-
-   if flag == 1: 
-            print "Authentication Successfull" 
+    def connect(self, host, port, timeout):
+        self.connection = self.manager.openTCPClientConnection(host, port, timeout)
+        if self.connection:
+            self.reader.addConnection(self.connection)
+            print "Client: Connected to server."
             
-       ###################################################### 
-       ## 
-       ## Now that we are known and trusted by the server, lets 
-       ## send some text! 
-       ## 
-       
-       ## creating the buffer again 
-       pkg = PyDatagram() 
-       
-       ## Putting the Op-Code into the buffer saying that this is 
-       ## going to be a chat message. (if you read the buffer you 
-       ## would see then a 3 there. Why? Because CMSG_CHAT=3 
-            pkg.addUint16(CMSG_CHAT) 
-       
-       ## Next we are going to add our desired Chat message 
-       ## to the buffer. Don't get confused about the %s 
-       ## its a useable way to use variables in C++ 
-       ## you can write also: 
-       ## pkg.addString('Hey, ',USERNAME,' is calling!') 
-            pkg.addString("%s is calling in and is glad to be here" % USERNAME) 
+    def send(self, datagram):
+        if self.connection:
+            self.writer.send(datagram, self.connection)
             
-       ## Now lets send the whole thing... 
-       self.send(pkg) 
             
+class Protocol:
+    def process(self, data):
+        return None
   
-    def msgChat(self, msgID, data): 
+    def printMessage(self, title, msg):
+        print "%s %s" % (title, msg)
+   
+    def buildReply(self, msgid, data):
+        reply = PyDatagram()
+        reply.addUint8(msgid)
+        reply.addString(data)
+        return reply
+            
+            
+            
+            
+class ServerProtocol(Protocol):
+    def process(self, data):
+        it = PyDatagramIterator(data)
+        msgid = it.getUint8()
+        if msgid == 0:
+            return self.handleHello(it)
+        elif msgid == 1:
+            return self.handleQuestion(it)
+        elif msgid == 2:
+            return self.handleBye(it)
         
-   ########################################################## 
-   ## 
-   ## Here comes the interaction with the data sent from the server... 
-   ## Due to the fact that the server does not send any data the 
-   ## client could display, its only here to show you how it COULD 
-   ## be used. Of course you can do anything with "data". The 
-   ## raw print to console should only show a example. 
-   ## 
     
-   print data.getString() 
-
-    def msgDisconnectAck(self, msgID, data): 
+    def handleHello(self, it):
+        self.printMessage("Server received:", it.getString())
+        return self.buildReply(0, "Hello, too!")
         
-   ########################################################### 
-   ## 
-   ## If the server sends a "close" command to the client, this 
-   ## would be handled here. Due to the fact that he doesn't do 
-   ## that, its just another example that does show what would 
-   ## be an example about how to do it. I would be careful with 
-   ## the example given here... In that case everything a potential 
-   ## unfriendly person needs to do is sending you a paket with a 
-   ## 6 in it coming from the server (not sure if it even needs to 
-   ## be from the server) the application will close... You might 
-   ## want to do a double checking with the server again to ensure 
-   ## that he sent you the paket... But thats just a advice ;) 
-   ## 
     
-   ## telling the Manager to close the connection    
-   self.cManager.closeConnection(self.Connection) 
+    def handleQuestion(self, it):
+        self.printMessage("Server received:", it.getString())
+        return self.buildReply(1, "I'm fine. How are you?")
         
-   ## saying good bye 
-   sys.exit() 
     
+    def handleBye(self, it):
+        self.printMessage("Server received:", it.getString())
+        return self.buildReply(2, "Bye!")
+                    
+                
+                
+class ClientProtocol(Protocol):
+    def __init__(self, smiley):
+        self.smiley = smiley
+    
+    def process(self, data):
+        it = PyDatagramIterator(data)
+        vel = it.getFloat32()
+        z = it.getFloat32()
+        diff = z - self.smiley.getZ()
+        self.smiley.setPythonTag("velocity", vel + diff * 0.03)
+        return None
 
-    def send(self, pkg): 
-        self.cWriter.send(pkg, self.Connection) 
-
-    def quit(self): 
-        self.cManager.closeConnection(self.Connection) 
-        sys.exit() 
         
-###################################################################### 
-## 
-## OK! After all of this preparation lets create a Instance of the 
-## Client Class created above. Call it as you wish. Make sure that you 
-## use the right Instance name in the dictionary "Handlers" as well... 
-## 
-
-aClient = Client() 
-
-###################################################################### 
-## 
-## That is the second piece of code from the 
-## def handleDatagram(self, data, msgID): - Method. If you have 
-## trouble understanding this, please ask. 
-## 
-
-Handlers = { 
-    SMSG_AUTH_RESPONSE  : aClient.msgAuthResponse, 
-    SMSG_CHAT           : aClient.msgChat, 
-    SMSG_DISCONNECT_ACK : aClient.msgDisconnectAck, 
-    } 
-
-####################################################################### 
-## 
-## As Examples for other Instance names: 
-## 
-## justAExample = Client() 
-## 
-## Handlers = { 
-##    SMSG_AUTH_RESPONSE  : justAExample.msgAuthResponse, 
-##    SMSG_CHAT           : justAExample.msgChat, 
-##    SMSG_DISCONNECT_ACK : justAExample.msgDisconnectAck, 
-##    } 
-
-    
-######################################################################## 
-## 
-## We need that loop. Otherwise it would run once and then quit. 
-##    
-run() 
+class ServerSmiley:
+    def __init__(self):
+        self.pos = Vec3(0, 0, 30)
+        self.vel = 0
+        
+    def update(self):
+        #print "Updating server smiley"
+        z = self.pos.getZ()
+        if z <= 0:
+            self.vel = random.uniform(0.1, 0.8)
+        self.pos.setZ(z + self.vel)
+        self.vel -= 0.01
