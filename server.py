@@ -21,6 +21,28 @@ class Application(ShowBase):
         #client = Client(ClientProtocol(self.smiley))
         #client.connect("localhost", 9999, 3000)
         
+        '''
+        print "Starting server"
+        ShowBase.__init__(self)
+        
+        #server = Server(ServerProtocol(), 9999)
+                        
+        client = Client(ClientProtocol())
+        client.connect("128.113.232.77", 9999, 3000)
+        data = PyDatagram()
+        data.addUint8(0)
+        data.addString(str(time()))
+        client.send(data)
+
+        while True:
+            inputString = raw_input('\t:')
+            #print inputString
+            reply = PyDatagram()
+            reply.addUint8(0)
+            reply.addString(str(time()))
+            client.send(reply)
+        '''
+        
         taskMgr.add(self.updateSmiley, "updateSmiley")
         
 
@@ -95,6 +117,12 @@ class Server(NetCommon):
         sync = PyDatagram()
         sync.addFloat32(self.smiley.vel)
         sync.addFloat32(self.smiley.pos.getZ())
+        print self.smiley.pos.getZ()
+        sync.addFloat32(self.smiley.pos.getX())
+        print self.smiley.pos.getX()
+        sync.addFloat32(self.smiley.pos.getY())
+        print self.smiley.pos.getY()
+        sync.addFloat32(777)
         self.broadcast(sync)
         return task.again
     

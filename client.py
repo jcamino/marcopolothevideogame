@@ -10,8 +10,6 @@ class Application(ShowBase):
         
         ShowBase.__init__(self)
         
-        #server = Server(Protocol(), 9999)
-        
         self.smiley = loader.loadModel("smiley")
         self.smiley.setPythonTag("velocity", 0)
         self.smiley.reparentTo(render)
@@ -23,34 +21,16 @@ class Application(ShowBase):
         
         taskMgr.add(self.updateSmiley, "updateSmiley")
         
-        '''
-        print "Starting server"
-        ShowBase.__init__(self)
-        
-        #server = Server(ServerProtocol(), 9999)
-                    
-        
-        client = Client(ClientProtocol())
-        client.connect("128.113.232.77", 9999, 3000)
-        data = PyDatagram()
-        data.addUint8(0)
-        data.addString(str(time()))
-        client.send(data)
-        
-        
-      
-        while True:
-            inputString = raw_input('\t:')
-            #print inputString
-            reply = PyDatagram()
-            reply.addUint8(0)
-            reply.addString(str(time()))
-            client.send(reply)
-        '''
+
 
     def updateSmiley(self, task):
+        pass
+    '''return task.cont
+    
         #print "Updating client smiley"
         vel = self.smiley.getPythonTag("velocity")
+        
+        #z = self.smiley.getPythonTag("znew")
         z = self.smiley.getZ()
         
         if z <= 0:
@@ -59,9 +39,8 @@ class Application(ShowBase):
         self.smiley.setZ(z + vel)
         self.smiley.setX(20)
         vel -= 0.01
-        self.smiley.setPythonTag("velocity", vel)
+        self.smiley.setPythonTag("velocity", vel)'''
         
-        return task.cont
 
 class NetCommon:
     def __init__(self, protocol):
@@ -110,8 +89,7 @@ class Protocol:
         reply = PyDatagram()
         reply.addUint8(msgid)
         reply.addString(data)
-        return reply
-            
+        return reply        
             
         
 class ClientProtocol(Protocol):
@@ -122,8 +100,20 @@ class ClientProtocol(Protocol):
         it = PyDatagramIterator(data)
         vel = it.getFloat32()
         z = it.getFloat32()
-        diff = z - self.smiley.getZ()
-        self.smiley.setPythonTag("velocity", vel + diff * 0.03)
+        x = it.getFloat32()
+        y = it.getFloat32()
+        checksum = it.getFloat32()
+        
+        print "velocity:" , vel ,
+        " Z position:" , z , " Checksum " , checksum
+        
+        newx = x
+        zdiff = z - self.smiley.getZ()
+        #self.smiley.setPythonTag("velocity", vel + zdiff * 0.03)
+        
+        self.smiley.setX(x)
+        self.smiley.setZ(z)
+        self.smiley.setY(y)
         return None
 
         
