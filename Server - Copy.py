@@ -23,6 +23,30 @@ class Application(ShowBase):
         
         taskMgr.add(self.updateSmiley, "updateSmiley")
         
+        '''
+        print "Starting server"
+        ShowBase.__init__(self)
+        
+        #server = Server(ServerProtocol(), 9999)
+                    
+        
+        client = Client(ClientProtocol())
+        client.connect("128.113.232.77", 9999, 3000)
+        data = PyDatagram()
+        data.addUint8(0)
+        data.addString(str(time()))
+        client.send(data)
+        
+        
+      
+        while True:
+            inputString = raw_input('\t:')
+            #print inputString
+            reply = PyDatagram()
+            reply.addUint8(0)
+            reply.addString(str(time()))
+            client.send(reply)
+        '''
 
     def updateSmiley(self, task):
         #print "Updating client smiley"
@@ -103,6 +127,20 @@ class Server(NetCommon):
             self.writer.send(datagram, conn)
         
         
+class Client(NetCommon):
+    def __init__(self, protocol):
+        NetCommon.__init__(self, protocol)
+    
+    def connect(self, host, port, timeout):
+        self.connection = self.manager.openTCPClientConnection(host, port, timeout)
+        if self.connection:
+            self.reader.addConnection(self.connection)
+            print "Client: Connected to server."
+            
+    def send(self, datagram):
+        if self.connection:
+            self.writer.send(datagram, self.connection)
+            
             
 class Protocol:
     def process(self, data):
@@ -116,7 +154,9 @@ class Protocol:
         reply.addUint8(msgid)
         reply.addString(data)
         return reply
-                      
+            
+            
+            
             
 class ServerProtocol(Protocol):
     def process(self, data):
@@ -144,7 +184,20 @@ class ServerProtocol(Protocol):
         self.printMessage("Server received:", it.getString())
         return self.buildReply(2, "Bye!")
                     
-  
+                
+                
+class ClientProtocol(Protocol):
+    def __init__(self, smiley):
+        self.smiley = smiley
+    
+    def process(self, data):
+        it = PyDatagramIterator(data)
+        vel = it.getFloat32()
+        z = it.getFloat32()
+        diff = z - self.smiley.getZ()
+        self.smiley.setPythonTag("velocity", vel + diff * 0.03)
+        return None
+
         
 class ServerSmiley:
     def __init__(self):
