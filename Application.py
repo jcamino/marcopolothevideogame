@@ -2,18 +2,62 @@ from direct.showbase.ShowBase import ShowBase
 from panda3d.core import *
 from direct.distributed.PyDatagram import PyDatagram
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
+from time import time
+import random
 
 class Application(ShowBase):
     def __init__(self):
+        
+        ShowBase.__init__(self)
+        server = Server(Protocol(), 9999)
+        self.smiley = loader.loadModel("smiley")
+        self.smiley.setPythonTag("velocity", 0)
+        self.smiley.reparentTo(render)
+        self.smiley.setPos(0, 0, 30)
+        self.cam.setPos(0, -100, 10)
+        client = Client(ClientProtocol(self.smiley))
+        client.connect("localhost", 9999, 3000)
+        taskMgr.add(self.updateSmiley, "updateSmiley")
+        
+        '''
         print "Starting server"
         ShowBase.__init__(self)
-        server = Server(ServerProtocol(), 9999)
+        
+        #server = Server(ServerProtocol(), 9999)
+                    
+        
         client = Client(ClientProtocol())
-        client.connect("localhost", 9999, 3000)
+        client.connect("128.113.232.77", 9999, 3000)
         data = PyDatagram()
         data.addUint8(0)
-        data.addString("Hello!")
+        data.addString(str(time()))
         client.send(data)
+        
+        
+      
+        while True:
+            inputString = raw_input('\t:')
+            #print inputString
+            reply = PyDatagram()
+            reply.addUint8(0)
+            reply.addString(str(time()))
+            client.send(reply)
+        '''
+
+    def updateSmiley(self, task):
+        #print "Updating client smiley"
+        vel = self.smiley.getPythonTag("velocity")
+        z = self.smiley.getZ()
+        
+        if z <= 0:
+            vel = random.uniform(0.1, 0.8)
+        
+        self.smiley.setZ(z + vel)
+        self.smiley.setX(20)
+        vel -= 0.01
+        self.smiley.setPythonTag("velocity", vel)
+        
+        return task.cont
 
 class NetCommon:
     def __init__(self, protocol):
@@ -42,8 +86,12 @@ class Server(NetCommon):
         socket = self.manager.openTCPServerRendezvous(port, 100)
         self.listener.addConnection(socket)
         self.connections = []
-        
+        self.smiley = ServerSmiley()
+        self.frowney = loader.loadModel("frowney")
+        self.frowney.reparentTo(render)
         taskMgr.add(self.updateListener, "updateListener")
+        taskMgr.add(self.updateSmiley, "updateSmiley")
+        taskMgr.doMethodLater(0.1, self.syncSmiley, "syncSmiley")
         
     def updateListener(self, task):
         if self.listener.newConnectionAvailable():
@@ -56,6 +104,23 @@ class Server(NetCommon):
                 
                 
         return task.cont
+        
+    def updateSmiley(self, task):
+        self.smiley.update()
+        self.frowney.setPos(self.smiley.pos)
+        return task.cont
+        
+    def syncSmiley(self, task):
+        print "SYNCING SMILEYS!"
+        sync = PyDatagram()
+        sync.addFloat32(self.smiley.vel)
+        sync.addFloat32(self.smiley.pos.getZ())
+        self.broadcast(sync)
+        return task.again
+    
+    def broadcast(self, datagram):
+        for conn in self.connections:
+            self.writer.send(datagram, conn)
         
         
 class Client(NetCommon):
@@ -117,28 +182,28 @@ class ServerProtocol(Protocol):
                     
                 
                 
-                
 class ClientProtocol(Protocol):
+    def __init__(self, smiley):
+        self.smiley = smiley
+    
     def process(self, data):
         it = PyDatagramIterator(data)
-        msgid = it.getUint8()
-        if msgid == 0:
-            return self.handleHello(it)
-        elif msgid == 1:
-            return self.handleQuestion(it)
-        elif msgid == 2:
-            return self.handleBye(it)
-        
-    def handleHello(self, it):
-        self.printMessage("Client received:", it.getString())
-        return self.buildReply(1, "How are you?")
-        
-    def handleQuestion(self, it):
-        self.printMessage("Client received:", it.getString())
-        return self.buildReply(2, "I'm fine too. Gotta run! Bye!")
-        
-    def handleBye(self, it):
-        self.printMessage("Client received:", it.getString())
+        vel = it.getFloat32()
+        z = it.getFloat32()
+        diff = z - self.smiley.getZ()
+        self.smiley.setPythonTag("velocity", vel + diff * 0.03)
         return None
-                    
-           
+
+        
+class ServerSmiley:
+    def __init__(self):
+        self.pos = Vec3(0, 0, 30)
+        self.vel = 0
+        
+    def update(self):
+        #print "Updating server smiley"
+        z = self.pos.getZ()
+        if z <= 0:
+            self.vel = random.uniform(0.1, 0.8)
+        self.pos.setZ(z + self.vel)
+        self.vel -= 0.01
