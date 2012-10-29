@@ -24,23 +24,17 @@ class Application(ShowBase):
 
 
     def updateSmiley(self, task):
-        pass
-    '''return task.cont
-    
         #print "Updating client smiley"
         vel = self.smiley.getPythonTag("velocity")
         
         #z = self.smiley.getPythonTag("znew")
         z = self.smiley.getZ()
         
-        if z <= 0:
-            vel = random.uniform(0.1, 0.8)
-        
         self.smiley.setZ(z + vel)
-        self.smiley.setX(20)
-        vel -= 0.01
-        self.smiley.setPythonTag("velocity", vel)'''
-        
+        self.smiley.setX(-20)
+        #vel -= 0.01
+        #self.smiley.setPythonTag("velocity", vel)
+        return task.cont
 
 class NetCommon:
     def __init__(self, protocol):
@@ -104,16 +98,16 @@ class ClientProtocol(Protocol):
         y = it.getFloat32()
         checksum = it.getFloat32()
         
-        print "velocity:" , vel ,
-        " Z position:" , z , " Checksum " , checksum
+        #print "velocity:" , vel ,
+        #" Z position:" , z , " Checksum " , checksum
         
         newx = x
         zdiff = z - self.smiley.getZ()
-        #self.smiley.setPythonTag("velocity", vel + zdiff * 0.03)
+        self.smiley.setPythonTag("velocity", vel + zdiff * 0.03)
         
-        self.smiley.setX(x)
-        self.smiley.setZ(z)
-        self.smiley.setY(y)
+        #self.smiley.setX(x)
+        #self.smiley.setZ(z)
+        #self.smiley.setY(y)
         return None
 
         

@@ -51,9 +51,6 @@ class Application(ShowBase):
         vel = self.smiley.getPythonTag("velocity")
         z = self.smiley.getZ()
         
-        if z <= 0:
-            vel = random.uniform(0.1, 0.8)
-        
         self.smiley.setZ(z + vel)
         self.smiley.setX(20)
         vel -= 0.01
@@ -93,7 +90,7 @@ class Server(NetCommon):
         self.frowney.reparentTo(render)
         taskMgr.add(self.updateListener, "updateListener")
         taskMgr.add(self.updateSmiley, "updateSmiley")
-        taskMgr.doMethodLater(0.1, self.syncSmiley, "syncSmiley")
+        taskMgr.doMethodLater(0.25, self.syncSmiley, "syncSmiley")
         
     def updateListener(self, task):
         if self.listener.newConnectionAvailable():
