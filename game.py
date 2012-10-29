@@ -5,62 +5,32 @@ from direct.actor.Actor import Actor #for animated models
 from direct.interval.IntervalGlobal import * #for compound intervals
 from direct.task import Task #for update functions
 from direct.gui.OnscreenText import OnscreenText
+from direct.gui.DirectGui import *
 from direct.distributed.PyDatagram import PyDatagram 
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
 import math, sys, random, socket
+import engineStateManager
 
 class Game(DirectObject):
     
     def __init__ (self):
         #Allows custom camera positioning
         base.disableMouse()
-        self.keyMap = {"left":False, "right":False, "forward":False, "back":False}
+        self.reset_keymap()
         self.prevTime = 0
         
-        taskMgr.add(self.move_player, "moveTask",priority=1)
-        taskMgr.add(self.move_camera, "cameraTask",priority=5)
-        taskMgr.add(self.update_prev_time, "timeTask",priority=6)
-        taskMgr.add(self.update_obstacles, "obstacleUpdateTask",priority=2)
-        taskMgr.add(self.update_terrain, "terrainUpdateTask", priority=3)
-        taskMgr.add(self.listenerPolling, "connectionOpener", priority=4)
-        taskMgr.add(self.readerPolling, "connectionOpener", priority=4)
-        
-        self.accept("escape", sys.exit)
-        self.accept("arrow_up", self.setKey, ["forward", True])
-        self.accept("arrow_left", self.setKey, ["left", True])
-        self.accept("arrow_right", self.setKey, ["right", True])
-        self.accept("arrow_down", self.setKey, ["back", True])
-        self.accept("arrow_up-up", self.setKey, ["forward", False])
-        self.accept("arrow_left-up", self.setKey, ["left", False])
-        self.accept("arrow_right-up", self.setKey, ["right", False])
-        self.accept("arrow_down-up", self.setKey, ["back", False])
-        self.accept("h",self.toggle_headLights,[])
-        self.accept("proton-electron",self.player_hit,[])
+        self.stateManager = engineStateManager.EngineFSM(self)
+        self.stateManager.request('Game')
+        self.accept("p",self.printText,[self.stateManager.state])
         
         self.load_assets()
         self.setup_collision()
-        self.setup_networking()
         
         self.headlightson = True
         self.playerHits = 0
         
         self.hpPrompt = OnscreenText(text = 'HitPoints:', pos = (-0.55, -0.2), scale = 0.07)
         self.hpText = OnscreenText(text = str(10-self.playerHits), pos = (-0.35, -0.2), scale = 0.07)
-        
-    def setup_networking(self):
-        #Basic networking manager
-        self.cManager = QueuedConnectionManager()
-        
-        #Listens for new connections and queue's them 
-        self.cListener = QueuedConnectionListener(self.cManager, 0) 
-
-        #Reads data send to the server 
-        self.cReader = QueuedConnectionReader(self.cManager, 0) 
-
-        #Writes / sends data to the client 
-        self.cWriter = ConnectionWriter(self.cManager,0)
-        
-        self.connections = []
         
     def load_assets(self):
     
@@ -163,7 +133,7 @@ class Game(DirectObject):
         render.attachNewNode(cNode)
         
         for obstacle in self.obstacles:
-            if random.randint(0,1) == 1:
+            if obstacle.getName() == 'electron':
                 cNode = CollisionNode("electron")
             else:
                 cNode = CollisionNode("neutron")
@@ -177,12 +147,10 @@ class Game(DirectObject):
         
         
     def toggle_headLights(self):
-        if self.headlightson:
-            render.clearLight(self.headlight)
-            self.headlightson = False
+        if self.stateManager.state == 'Game':
+            self.stateManager.request('Menu')
         else:
-            render.setLight(self.headlight)
-            self.headlightson = True
+            self.stateManager.request('Game')
             
     def player_hit (self, cEntry):
         self.playerHits += 1
@@ -253,34 +221,24 @@ class Game(DirectObject):
         
         return task.cont
         
-         
-    def listenerPolling(self,task):
-        if self.cListener.newConnectionAvailable():
-            rendezvous = PointerToConnection()
-            print rendezvous
-            netAddress = NetAddress()
-            newConnection = PointerToConnection()
+    def goto_state(self,toState):
+        if self.engineState == 0:
+            if toState == 1:
+                self.stateManager.request('Game')
+                
+        if self.engineState == 1:
+            if toState == 0:
+                self.stateManager.request('Menu')
+                
+                
+    def reset_keymap(self):
+        self.keyMap = {"left":False, "right":False, "forward":False, "back":False}
             
-            if self.cListener.getNewConnection(rendezvous,netAddress,newConnection):
-                newConnection = newConnection.p()
-                activeConnections.append(newConnection) # Remember connection
-                self.cReader.addConnection(newConnection)     # Begin reading connection
-
-      
-    def readerPolling(self,task):
-        if self.cReader.dataAvailable():
-            data = NetDatagram()
-            if self.cReader.getData(data):
-                self.processNetworkingData(data)
-
-        return task.cont
-        
-    def processNetworkingData(self,data):
-        print data
-        
     def setKey(self,key,value):
         self.keyMap[key] = value
         
+    def printText(self,string):
+        print string
 
 engine = Game()
 run()
