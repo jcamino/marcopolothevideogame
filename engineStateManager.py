@@ -15,7 +15,6 @@ class EngineFSM(FSM):
         FSM.__init__(self, 'EngineFSM')
         self.engine=engine
     def enterGame(self):
-        print "switching to game"
         taskMgr.add(self.engine.move_player, "moveTask",priority=1)
         taskMgr.add(self.engine.move_camera, "cameraTask",priority=5)
         taskMgr.add(self.engine.update_prev_time, "timeTask",priority=6)
@@ -60,9 +59,9 @@ class EngineFSM(FSM):
         self.engine.accept("h",self.engine.toggle_headLights,[])
         
         self.gameButton = DirectButton(text=("Go to Game", "Into the game!","You sure?", "disabled"))
-        #self.gameButton['image_pos'] = (0,30,10)
-        #self.gameButton['command'] = self.request
-        #self.gameButton['extraArgs'] = 'Game'
+        self.gameButton['image_pos'] = (0.95,-0.95)
+        self.gameButton['command'] = self.request
+        self.gameButton['extraArgs'] = ['Game']
         
     def exitMenu(self):
         self.engine.ignore("escape")
