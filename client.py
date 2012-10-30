@@ -5,6 +5,8 @@ from direct.distributed.PyDatagramIterator import PyDatagramIterator
 from time import time
 import random
 
+clientId = -1
+
 class Application(ShowBase):
     def __init__(self):
         
@@ -19,9 +21,12 @@ class Application(ShowBase):
         client = Client(ClientProtocol(self.smiley))
         client.connect("localhost", 9999, 3000)
         
-        taskMgr.add(self.updateSmiley, "updateSmiley")
+      
+        print "Sending back data"
         
 
+        
+        taskMgr.add(self.updateSmiley, "updateSmiley")
 
     def updateSmiley(self, task):
         #print "Updating client smiley"
@@ -51,7 +56,10 @@ class NetCommon:
             reply = self.protocol.process(data)
         
             if reply != None:
+                print "Sending a reply"
                 self.writer.send(reply, data.getConnection())
+            else:
+                print "there wasn't a reply"
        
         return task.cont
 
@@ -70,6 +78,9 @@ class Client(NetCommon):
     def send(self, datagram):
         if self.connection:
             self.writer.send(datagram, self.connection)
+            print "sent data to server"
+        else:
+            print "failed to send data"
             
             
 class Protocol:
@@ -92,6 +103,9 @@ class ClientProtocol(Protocol):
     
     def process(self, data):
         it = PyDatagramIterator(data)
+        mssgID = it.getUint8()
+        if mssgID == 42:
+            return None
         vel = it.getFloat32()
         z = it.getFloat32()
         x = it.getFloat32()
@@ -108,7 +122,17 @@ class ClientProtocol(Protocol):
         #self.smiley.setX(x)
         #self.smiley.setZ(z)
         #self.smiley.setY(y)
-        return None
+        
+
+        data = PyDatagram()
+        data.addUint8(0)
+        data.addString("w") #change this to key being pressed forward
+        
+        
+        data.addString("OH HI MARTK!!")
+        
+        
+        return data
 
         
         

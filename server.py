@@ -5,6 +5,8 @@ from direct.distributed.PyDatagramIterator import PyDatagramIterator
 from time import time
 import random
 
+direction = {'1': -1, '2': -1,'3':-1,'4':-1,'5':-1}
+
 class Application(ShowBase):
     def __init__(self):
         
@@ -17,6 +19,7 @@ class Application(ShowBase):
         self.smiley.reparentTo(render)
         self.smiley.setPos(0, 0, 30)
         self.cam.setPos(0, -100, 10)
+        self.direction = "0"
         
         #client = Client(ClientProtocol(self.smiley))
         #client.connect("localhost", 9999, 3000)
@@ -45,6 +48,8 @@ class Application(ShowBase):
         
         taskMgr.add(self.updateSmiley, "updateSmiley")
         
+        
+        
 
     def updateSmiley(self, task):
         #print "Updating client smiley"
@@ -55,6 +60,7 @@ class Application(ShowBase):
         self.smiley.setX(20)
         vel -= 0.01
         self.smiley.setPythonTag("velocity", vel)
+        #print direction['1']
         
         return task.cont
 
@@ -100,6 +106,21 @@ class Server(NetCommon):
                 self.connections.append(connection)
                 self.reader.addConnection(connection)
                 print "Server: New connection established."
+
+                self.tempClientID = -1
+                for client in direction:
+                    if direction[client] == -1:
+                        direction[client] = 0
+                        print "Client ID ",client
+                        self.tempClientID = client
+                        break
+                if self.tempClientID == -1:
+                    print "Server is full, keeping connection but giving fake ID!"
+                    
+                reply = PyDatagram()
+                reply.addUint8(42)
+                reply.addUint8(self.tempClientID)
+                self.writer.send(reply,connection)
                 
                 
         return task.cont
@@ -112,6 +133,7 @@ class Server(NetCommon):
     def syncSmiley(self, task):
         print "SYNCING SMILEYS!"
         sync = PyDatagram()
+        sync.addUint8(1)
         sync.addFloat32(self.smiley.vel)
         sync.addFloat32(self.smiley.pos.getZ())
         print self.smiley.pos.getZ()
@@ -131,6 +153,31 @@ class Server(NetCommon):
             
 class Protocol:
     def process(self, data):
+        print "Got some data but not gonna do anything!"
+        it = PyDatagramIterator(data)
+        msgid = it.getUint8()
+        
+        if msgid == 1:
+            direction['1']=it.getString()
+            self.printMessage("Server received:", direction['1'])
+        
+        if msgid == 2:
+            direction['2']=it.getString()
+            self.printMessage("Server received:", direction['2'])        
+        
+        if msgid == 3:
+            direction['3']=it.getString()
+            self.printMessage("Server received:", direction['3'])  
+
+        if msgid == 4:
+            direction['4']=it.getString()
+            self.printMessage("Server received:", direction['4'])
+
+        if msgid == 5:
+            direction['5']=it.getString()
+            self.printMessage("Server received:", direction['5'])
+
+            
         return None
   
     def printMessage(self, title, msg):
@@ -138,6 +185,7 @@ class Protocol:
    
     def buildReply(self, msgid, data):
         reply = PyDatagram()
+        reply.addUint8(1)
         reply.addUint8(msgid)
         reply.addString(data)
         return reply
@@ -145,9 +193,11 @@ class Protocol:
             
 class ServerProtocol(Protocol):
     def process(self, data):
+        print "Got some data"
         it = PyDatagramIterator(data)
         msgid = it.getUint8()
         if msgid == 0:
+            print "Got 0 key mssg"
             return self.handleHello(it)
         elif msgid == 1:
             return self.handleQuestion(it)
