@@ -30,7 +30,7 @@ class EngineFSM(FSM):
         self.engine.accept("arrow_right-up", self.engine.setKey, ["right", False])
         self.engine.accept("arrow_down-up", self.engine.setKey, ["back", False])
         self.engine.accept("h",self.engine.toggle_headLights,[])
-        self.engine.accept("proton-electron",self.engine.player_hit,[])
+        self.engine.accept("0",self.engine.player_hit,[])
         
         self.engine.reset_keymap()
         

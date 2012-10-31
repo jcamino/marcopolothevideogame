@@ -27,11 +27,6 @@ class Game(DirectObject):
         self.load_assets()
         self.setup_collision()
         
-        self.headlightson = True
-        self.playerHits = 0
-        
-        self.hpPrompt = OnscreenText(text = 'HitPoints:', pos = (-0.55, -0.2), scale = 0.07)
-        self.hpText = OnscreenText(text = str(10-self.playerHits), pos = (-0.35, -0.2), scale = 0.07)
         
         self.marco = False
         
@@ -99,16 +94,16 @@ class Game(DirectObject):
         self.directionalLightSource.setColor((0.6,0.4,0.5,1.0))
         render.setLight(render.attachNewNode(self.directionalLightSource))
         
-        
+    
     def setup_collision(self):
         #Starts by setting up Collision detection stuff
         base.cTrav = CollisionTraverser()
         self.pusher = CollisionHandlerPusher()
-        self.pusher.setInPattern("%fn-%in")
+        self.pusher.setInPattern("%in")
         
         
         for player in self.players:
-            cNode = CollisionNode("player"+player.getName())
+            cNode = CollisionNode(player.getName())
             cNode.addSolid(CollisionSphere((0,0,3),3))
             cNode.setFromCollideMask(0x1)
             
@@ -152,24 +147,9 @@ class Game(DirectObject):
             self.stateManager.request('Game')
             
     def player_hit (self, cEntry):
-        if cEntry.getName() == 'player0':
-            data = PyDatagram()
-            data.addInt8(38)
-            self.server.send(data)
-            
-            
-            
-        self.playerHits += 1
-        #self.obstacles.remove(cEntry.getIntoNodePath().getParent())
-        cEntry.getIntoNodePath().getParent().remove()
-        
-        self.hpText.destroy()
-        self.hpText = OnscreenText(text = str(10-self.playerHits), pos = (-0.35, -0.2), scale = 0.07)
-        
-        if self.playerHits >= 10:
-            sys.exit()
-        elif self.playerHits >8:
-            self.imminentDeathText = OnscreenText(text = "ABOUT TO DIE!!", pos = (-0.35, -0.4), scale = 0.07)
+        data = PyDatagram()
+        data.addInt8(38)
+        self.server.send(data)
         
     def move_player(self, task):
         dt = task.time - self.prevTime
@@ -381,6 +361,7 @@ class ClientProtocol(Protocol):
             
         elif mssgID == 38:
             print "Marco Won"
+            self.game.stateManager.request("MarcoWins")
             
         elif mssgID == 39:
             print "Marco lost"
