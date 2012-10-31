@@ -12,7 +12,7 @@ class Application(ShowBase):
         
         ShowBase.__init__(self)
         
-        server = Server(Protocol(), 9999)
+        server = Server(Protocol(self), 9999)
         
         self.smiley = loader.loadModel("smiley")
         self.smiley.setPythonTag("velocity", 0)
@@ -21,6 +21,15 @@ class Application(ShowBase):
         self.cam.setPos(0, -100, 10)
         self.direction = "0"
         
+        self.players = []
+        
+        for i in range (0,5):
+            self.players.append(0)
+            self.players[i] = loader.loadModel('models/proton')
+            self.players[i].reparentTo(render)
+            self.players[i].setScale(0.5)
+            self.players[i].setY(9999)
+            self.players[i].setName(str(i))
         #client = Client(ClientProtocol(self.smiley))
         #client.connect("localhost", 9999, 3000)
         
@@ -152,6 +161,9 @@ class Server(NetCommon):
         
             
 class Protocol:
+    def __init__(self, Application):
+        self.Application  = Application
+        
     def process(self, data):
         print "Got some data but not gonna do anything!"
         it = PyDatagramIterator(data)
@@ -159,15 +171,25 @@ class Protocol:
         
         if msgid == 1:
             direction['1']=it.getString()
-            self.printMessage("Server received:", direction['1'])
+            #self.printMessage("Server received:", direction['1'])
         
-        if msgid == 2:
-            direction['2']=it.getString()
-            self.printMessage("Server received:", direction['2'])        
+        #standard update
+        if msgid == 13:
+            tempID = it.getInt8()
+            
+            self.Application.players[tempID].setX(it.getFloat32())
+            self.Application.players[tempID].setY(it.getFloat32())
+            self.Application.players[tempID].setZ(it.getFloat32())
+            self.Application.players[tempID].setH(it.getFloat32())
+            self.Application.players[tempID].setP(it.getFloat32())
+            self.Application.players[tempID].setR(it.getFloat32())
+            
+            self.Application.players[tempID].setPythonTag("velocity",it.getFloat32())
+            #self.printMessage("Server received:", direction[2])        
         
-        if msgid == 3:
+        '''if msgid == 3:
             direction['3']=it.getString()
-            self.printMessage("Server received:", direction['3'])  
+           3 self.printMessage("Server received:", direction['3'])  
 
         if msgid == 4:
             direction['4']=it.getString()
@@ -176,7 +198,7 @@ class Protocol:
         if msgid == 5:
             direction['5']=it.getString()
             self.printMessage("Server received:", direction['5'])
-
+'''
             
         return None
   

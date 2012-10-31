@@ -10,7 +10,6 @@ from direct.distributed.PyDatagram import PyDatagram
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
 import math, sys, random, socket
 import engineStateManager
-clientID = -1
 
 
 class Game(DirectObject):
@@ -337,8 +336,9 @@ class Client(NetCommon):
        
 class ClientProtocol(Protocol):
 
-    def __init__(self, smiley):
-        self.smiley = smiley
+    def __init__(self, game):
+        self.game = game
+        self.clientID = -1
     
     def process(self, data):
         it = PyDatagramIterator(data)
@@ -348,6 +348,7 @@ class ClientProtocol(Protocol):
             print clientID
             return None
             
+        
         vel = it.getFloat32()
         z = it.getFloat32()
         x = it.getFloat32()
@@ -367,11 +368,27 @@ class ClientProtocol(Protocol):
         
 
         data = PyDatagram()
-        data.addUint8(0)
-        data.addString("w") #change this to key being pressed forward
         
-        print "in ClientProtocol.process()"
-        data.addString("OH HI MARTK!!")
+        data.addUint8(13)
+        data.addInt8(self.clientID)
+        data.addFloat32(self.game.player.getX())
+        data.addFloat32(self.game.player.getY())
+        data.addFloat32(self.game.player.getZ())
+        data.addFloat32(self.game.player.getH())
+        data.addFloat32(self.game.player.getP())
+        data.addFloat32(self.game.player.getR())
+        
+        if self.game.keyMap['forward'] and not self.game.keyMap['back']:
+            data.addFloat32(1.0)
+        elif not self.game.keyMap['forward'] and self.game.keyMap['back']:
+            data.addFloat32(-1.0)
+        else:
+            data.addFloat32(0)
+        
+        #data.addString("w") #change this to key being pressed forward
+        
+        #print "in ClientProtocol.process()"
+        #data.addString("OH HI MARTK!!")
         
         
         return data
