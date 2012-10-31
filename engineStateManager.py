@@ -19,7 +19,6 @@ class EngineFSM(FSM):
         taskMgr.add(self.engine.move_camera, "cameraTask",priority=5)
         taskMgr.add(self.engine.update_prev_time, "timeTask",priority=6)
         taskMgr.add(self.engine.update_obstacles, "obstacleUpdateTask",priority=2)
-        taskMgr.add(self.engine.update_terrain, "terrainUpdateTask", priority=3)
         
         self.engine.accept("escape", sys.exit)
         self.engine.accept("arrow_up", self.engine.setKey, ["forward", True])
@@ -40,7 +39,6 @@ class EngineFSM(FSM):
         taskMgr.remove("cameraTask")
         taskMgr.remove("timeTask")
         taskMgr.remove("obstacleUpdateTask")
-        taskMgr.remove("terrainUpdateTask")
         
         self.engine.ignore("escape")
         self.engine.ignore("arrow_up")

@@ -38,42 +38,34 @@ class Game(DirectObject):
 
     
         #Loads the plain, throws it into the scene graph and then scales it
-        self.terrain = loader.loadModel("models/plain")
+        self.terrain = loader.loadModel("models/Playground")
         self.terrain.reparentTo(render)
-        self.terrain.setScale(50)
+        self.terrain.setScale(1)
         self.terrain.setPos(0,0,0)
 
         #startup connection
         self.server = Client(ClientProtocol(self))
         
-        
-        #Adds the edges of the collider
-        self.terrain = loader.loadModel("models/plain")
-        self.terrain.reparentTo(render)
-        self.terrain.setScale(50)
-        self.terrain.setPos(-22,0,0)
-        self.terrain.setR(90)
-        
-        self.terrain = loader.loadModel("models/plain")
-        self.terrain.reparentTo(render)
-        self.terrain.setScale(50)
-        self.terrain.setPos(22,0,0)
-        self.terrain.setR(-90)
-        
-        self.terrain = loader.loadModel("models/plain")
-        self.terrain.reparentTo(render)
-        self.terrain.setScale(50)
-        self.terrain.setPos(0,0,22)
-        self.terrain.setR(180)
-        
+     
         render.setAntialias(AntialiasAttrib.MMultisample)
         
         self.players = []
         
         for i in range (0,5):
-            tempPlayer = loader.loadModel('models/proton')
+            if i == 0:
+                tempPlayer = loader.loadModel('models/Le-a_Default_Anim')
+            elif i == 1:
+                tempPlayer = loader.loadModel('models/Girl Lin Default')
+            elif i == 2:
+                tempPlayer = loader.loadModel('models/Gus_default_Anim')
+            elif i == 3:
+                tempPlayer = loader.loadModel('models/Tony_Default_Anim')
+            elif i == 4:
+                tempPlayer = loader.loadModel('models/Le-a_Default_Anim')
+            else:
+                tempPlayer = loader.loadModel('models/Le-a_Default_Anim')
             tempPlayer.reparentTo(render)
-            tempPlayer.setScale(0.5)
+            tempPlayer.setScale(0.25)
             tempPlayer.setY(9999)
             tempPlayer.setName(str(i))
             self.players.append(tempPlayer)
@@ -117,6 +109,7 @@ class Game(DirectObject):
         for player in self.players:
             cNode = CollisionNode("player"+player.getName())
             cNode.addSolid(CollisionSphere((0,0,3),3))
+            cNode.setFromCollideMask(0x1)
             
             cNodePath = player.attachNewNode(cNode)
         
@@ -127,13 +120,14 @@ class Game(DirectObject):
         cNode = CollisionNode("terrain")
         cNode.addSolid(CollisionPlane(Plane()))
         render.attachNewNode(cNode)
+        self.terrain.node().setIntoCollideMask(0x1)
         
         cNode = CollisionNode("terrainleft")
-        cNode.addSolid(CollisionPlane(Plane(Vec3(1,0,0),Point3(-22,0,0))))
+        cNode.addSolid(CollisionPlane(Plane(Vec3(1,0,0),Point3(-30,0,0))))
         render.attachNewNode(cNode)
         
         cNode = CollisionNode("terrainright")
-        cNode.addSolid(CollisionPlane(Plane(Vec3(-1,0,0),Point3(22,0,0))))
+        cNode.addSolid(CollisionPlane(Plane(Vec3(-1,0,0),Point3(30,0,0))))
         render.attachNewNode(cNode)
         '''
         for obstacle in self.obstacles:
@@ -200,6 +194,8 @@ class Game(DirectObject):
         camera.setPos(self.cameraPos,0,0,0)
         camera.lookAt(self.players[self.playerID])
         
+        camera.setP(camera.getP()+17)
+        
         return task.cont
         
     def rotate_camera_around(self,task):
@@ -233,13 +229,6 @@ class Game(DirectObject):
             if obstacle.getName()=="neutron":
                 pass
         '''
-        return task.cont
-        
-    def update_terrain (self, task):
-        dt = task.time - self.prevTime
-        
-        self.terrain.setY(((self.terrain.getY()-0.5))%100)
-        
         return task.cont
         
     def goto_state(self,toState):
@@ -355,7 +344,7 @@ class ClientProtocol(Protocol):
             self.game.cameraPos = self.game.players[self.game.playerID].attachNewNode("cameraPos")
             self.game.players[0].setY(9999)
             self.game.players[self.game.playerID].setPos(0,0,0)
-            self.game.cameraPos.setPos(0,20,5)
+            self.game.cameraPos.setPos(0,40,15)
             print "My player ID is ", self.clientID
           
             
