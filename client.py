@@ -42,6 +42,7 @@ class Application(ShowBase):
         return task.cont
 
 class NetCommon:
+
     def __init__(self, protocol):
         self.manager = ConnectionManager()
         self.reader = QueuedConnectionReader(self.manager, 0)
@@ -66,6 +67,7 @@ class NetCommon:
      
         
 class Client(NetCommon):
+
     def __init__(self, protocol):
         NetCommon.__init__(self, protocol)
     
@@ -84,6 +86,7 @@ class Client(NetCommon):
             
             
 class Protocol:
+
     def process(self, data):
         return None
   
@@ -98,6 +101,7 @@ class Protocol:
             
         
 class ClientProtocol(Protocol):
+
     def __init__(self, smiley):
         self.smiley = smiley
     

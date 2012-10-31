@@ -32,13 +32,18 @@ class Game(DirectObject):
         self.hpPrompt = OnscreenText(text = 'HitPoints:', pos = (-0.55, -0.2), scale = 0.07)
         self.hpText = OnscreenText(text = str(10-self.playerHits), pos = (-0.35, -0.2), scale = 0.07)
         
+       
     def load_assets(self):
+
     
         #Loads the plain, throws it into the scene graph and then scales it
         self.terrain = loader.loadModel("models/plain")
         self.terrain.reparentTo(render)
         self.terrain.setScale(50)
         self.terrain.setPos(0,0,0)
+        self.trial = "abc"
+        client = Client(ClientProtocol(self))
+        client.connect("localhost", 9999, 3000)
         
         #Adds the edges of the collider
         self.terrain = loader.loadModel("models/plain")
@@ -144,7 +149,6 @@ class Game(DirectObject):
             
             base.cTrav.addCollider(cNodePath,self.pusher)
             self.pusher.addCollider(cNodePath, obstacle)
-        
         
     def toggle_headLights(self):
         if self.stateManager.state == 'Game':
@@ -252,5 +256,107 @@ class Game(DirectObject):
     def printText(self,string):
         print string
 
-engine = Game()
-run()
+        
+           
+        
+class Protocol:
+
+    def process(self, data):
+        return None
+  
+    def printMessage(self, title, msg):
+        print "%s %s" % (title, msg)
+   
+    def buildReply(self, msgid, data):
+        reply = PyDatagram()
+        reply.addUint8(msgid)
+        reply.addString(data)
+        return reply           
+        
+class NetCommon:
+
+    def __init__(self, protocol):
+        self.manager = ConnectionManager()
+        self.reader = QueuedConnectionReader(self.manager, 0)
+        self.writer = ConnectionWriter(self.manager, 0)
+        self.protocol = protocol
+        taskMgr.add(self.updateReader, "updateReader")
+        
+    def updateReader(self, task):
+        if self.reader.dataAvailable():
+            data = NetDatagram()
+            self.reader.getData(data)
+            reply = self.protocol.process(data)
+        
+            if reply != None:
+                print "Sending a reply"
+                self.writer.send(reply, data.getConnection())
+            else:
+                print "there wasn't a reply"
+       
+        return task.cont
+
+     
+class Client(NetCommon):
+
+    def __init__(self, protocol):
+        NetCommon.__init__(self, protocol)
+    
+    def connect(self, host, port, timeout):
+        self.connection = self.manager.openTCPClientConnection(host, port, timeout)
+        if self.connection:
+            self.reader.addConnection(self.connection)
+            print "Client: Connected to server."
+            
+    def send(self, datagram):
+        if self.connection:
+            self.writer.send(datagram, self.connection)
+            print "sent data to server"
+        else:
+            print "failed to send data"
+            
+
+       
+class ClientProtocol(Protocol):
+
+    def __init__(self, smiley):
+        self.smiley = smiley
+    
+    def process(self, data):
+        it = PyDatagramIterator(data)
+        mssgID = it.getUint8()
+        if mssgID == 42:
+            return None
+        vel = it.getFloat32()
+        z = it.getFloat32()
+        x = it.getFloat32()
+        y = it.getFloat32()
+        checksum = it.getFloat32()
+        
+        #print "velocity:" , vel ,
+        #" Z position:" , z , " Checksum " , checksum
+        
+        newx = x
+        zdiff = z - self.smiley.getZ()
+        self.smiley.setPythonTag("velocity", vel + zdiff * 0.03)
+        
+        #self.smiley.setX(x)
+        #self.smiley.setZ(z)
+        #self.smiley.setY(y)
+        
+
+        data = PyDatagram()
+        data.addUint8(0)
+        data.addString("w") #change this to key being pressed forward
+        
+        
+        data.addString("OH HI MARTK!!")
+        
+        
+        return data
+
+ 
+ 
+if __name__ == '__main__': 
+    engine = Game()
+    run() 
