@@ -1,4 +1,4 @@
-import direct.showbase.ShowBase import ShowBase#starts Panda
+from direct.showbase.ShowBase import ShowBase #starts Panda
 from pandac.PandaModules import * #basic Panda modules
 from direct.showbase.DirectObject import DirectObject #for event handling
 from direct.actor.Actor import Actor #for animated models
@@ -17,6 +17,7 @@ class Game(ShowBase):
     
     def __init__ (self):
         #Allows custom camera positioning
+        ShowBase.__init__(self)
         base.disableMouse()
         self.reset_keymap()
         self.prevTime = 0
@@ -96,7 +97,7 @@ class Game(ShowBase):
         render.setLight(render.attachNewNode(self.directionalLightSource))
         
     def setupPostFx(self):
-        self.filterMan = FilterManager(base.win, camera)
+        self.filterMan = FilterManager(self.win, self.cam)
         colorTex = Texture()
         blurTex = Texture()
         depthTex = Texture()
