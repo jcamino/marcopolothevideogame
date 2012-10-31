@@ -379,10 +379,19 @@ class ClientProtocol(Protocol):
               #self.game.players[tempID].setPythonTag("velocity",it.getFloat32())
             
         elif mssgID == 38:
-            print "Game over"
+            print "Marco Won"
+            
+        elif mssgID == 39:
+            print "Marco lost"
+            winner = it.getInt8()
+            
             
         elif mssgID == 101:
-            self.game.stateManager.inflate(it.getInt8()-1)
+            scores = []
+            for i in range(0,5):
+                scores.append(it.getFloat32())
+            self.game.stateManager.inflate(scores)
+            
             
         '''
         vel = it.getFloat32()

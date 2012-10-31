@@ -113,12 +113,13 @@ class EngineFSM(FSM):
         
         self.engine.reparent_camera()
         
-    def exitMarcoLoses(self):
+    def exitMarcoWins(self):
         self.menuButton.destroy()
         self.winnerLabel.destroy()
         self.engine.ignore("escape")
         taskMgr.remove('rotateCameraTask')
         
-    def inflate(self,winner):
-        self.winnerLabels[winner]['text_scale'] =(self.winnerLabels[winner]['text_scale'][0]*1.005,self.winnerLabels[winner]['text_scale'][1]*1.005)
+    def inflate(self,scores):
+        for i in range(0,5):
+            self.winnerLabels[i]['text_scale'] =(scores[i],scores[i])
         

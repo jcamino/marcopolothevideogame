@@ -109,6 +109,9 @@ class Server(NetCommon):
         self.frowney.reparentTo(render)
         taskMgr.doMethodLater(.25, self.updateListener, "updateListener")
         
+        self.poloScores = []
+        for i in range(0,5):
+            self.poloScores.append(0.0)
         #taskMgr.add(self.updateSmiley, "updateSmiley")
         taskMgr.doMethodLater(0.25, self.syncSmiley, "syncSmiley")
         taskMgr.doMethodLater(0.25,self.update_winner, "updateWinnerTask")
@@ -129,11 +132,14 @@ class Server(NetCommon):
                     closest = i
                     closestDist=dist
                     
-        
+        print closest, " is the closest"
+        self.poloScores[closest]+=100.0/24.0/10000.0
+                    
         update = PyDatagram()
         update.addUint8(101)
         
-        update.addInt8(closest)
+        for score in self.poloScores:
+            update.addFloat32(score)
         self.broadcast(update)
         return task.cont
         
