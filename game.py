@@ -19,9 +19,9 @@ class Game(DirectObject):
         base.disableMouse()
         self.reset_keymap()
         self.prevTime = 0
-        
+        self.playerID = -1
         self.stateManager = engineStateManager.EngineFSM(self)
-        self.stateManager.request('Game')
+        self.stateManager.request('Menu')
         self.accept("p",self.printText,[self.stateManager.state])
         
         self.load_assets()
@@ -66,35 +66,36 @@ class Game(DirectObject):
         self.terrain.setPos(0,0,22)
         self.terrain.setR(180)
         
-        #Loads the player model, throws it into the scene graph and scales/positions it
-        self.player = loader.loadModel("models/proton")
-        self.player.reparentTo(render)
-        self.player.setScale(.5)
-        self.player.setPos(0,0,0)
-        self.player.setH(180)
-        
-        self.cameraPos = self.player.attachNewNode("cameraPos")
-        self.cameraPos.setPos(0,20,5)
-        
         render.setAntialias(AntialiasAttrib.MMultisample)
         
+        self.players = []
+        
+        for i in range (0,5):
+            tempPlayer = loader.loadModel('models/proton')
+            tempPlayer.reparentTo(render)
+            tempPlayer.setScale(0.5)
+            tempPlayer.setY(9999)
+            tempPlayer.setName(str(i))
+            self.players.append(tempPlayer)
+        
+        self.cameraPos = render.attachNewNode("cameraPos")
+        self.cameraPos.setPos(0,20,5)
+        camera.lookAt(render)
+        
         #Loads the enemies
+        '''
         self.obstacles = []
         for i in range(10):
-            if random.randint(0,1) == 1:
-                obstacle = loader.loadModel("models/electron")
-                obstacle.setScale(.5)
-                obstacle.setPos(random.randint(-20, 20), random.randint(80, 200), 0)
-                obstacle.setName("electron")
-            else:
-                obstacle = loader.loadModel("models/Neutron")
-                obstacle.setScale(.5)
-                obstacle.setPos(random.randint(-20, 20), random.randint(80, 200), 2)
-                obstacle.setName("neutron")
+            self.obstacles.append(0)
+            self.obstacles[i] = loader.loadModel('models/proton')
+            self.obstacles[i].reparentTo(render)
+            self.obstacles[i].setScale(0.5)
+            self.obstacles[i].setY(9999)
+            self.obstacles[i].setName(str(i))
             
-            obstacle.reparentTo(render)
-            self.obstacles.append(obstacle)
-            
+            #obstacle.reparentTo(render)
+            #self.obstacles.append(obstacle)
+        ''' 
         #Creates the lights in the world
         self.ambientLightSource = AmbientLight("ambientLight")
         self.ambientLightSource.setColor((0.3,0.2,0.4,1.0))
@@ -104,27 +105,22 @@ class Game(DirectObject):
         self.directionalLightSource.setColor((0.6,0.4,0.5,1.0))
         render.setLight(render.attachNewNode(self.directionalLightSource))
         
-        self.headlight = self.player.attachNewNode(Spotlight('headlight'))
-        self.headlight.node().setColor(Vec4(0.9,0.9,0.9,1))
-        self.headlight.setH(180)
-        render.setLight(self.headlight)
         
     def setup_collision(self):
         #Starts by setting up Collision detection stuff
         base.cTrav = CollisionTraverser()
         self.pusher = CollisionHandlerPusher()
         self.pusher.setInPattern("%fn-%in")
-    
-        #Sets up collision for the player
-        cNode = CollisionNode("proton")
-        cNode.addSolid(CollisionSphere((0,0,3),3))
-        cNode.setIntoCollideMask(BitMask32.allOff()) #turns off "into" collision on player
         
         
-        cNodePath = self.player.attachNewNode(cNode)
+        for player in self.players:
+            cNode = CollisionNode("player"+player.getName())
+            cNode.addSolid(CollisionSphere((0,0,3),3))
+            
+            cNodePath = player.attachNewNode(cNode)
         
-        base.cTrav.addCollider(cNodePath,self.pusher)
-        self.pusher.addCollider(cNodePath, self.player)
+            base.cTrav.addCollider(cNodePath,self.pusher)
+            self.pusher.addCollider(cNodePath, player)
         
         #Sets up collision for the terrain
         cNode = CollisionNode("terrain")
@@ -138,7 +134,7 @@ class Game(DirectObject):
         cNode = CollisionNode("terrainright")
         cNode.addSolid(CollisionPlane(Plane(Vec3(-1,0,0),Point3(22,0,0))))
         render.attachNewNode(cNode)
-        
+        '''
         for obstacle in self.obstacles:
             if obstacle.getName() == 'electron':
                 cNode = CollisionNode("electron")
@@ -151,6 +147,7 @@ class Game(DirectObject):
             
             base.cTrav.addCollider(cNodePath,self.pusher)
             self.pusher.addCollider(cNodePath, obstacle)
+        '''
         
     def toggle_headLights(self):
         if self.stateManager.state == 'Game':
@@ -160,7 +157,7 @@ class Game(DirectObject):
             
     def player_hit (self, cEntry):
         self.playerHits += 1
-        self.obstacles.remove(cEntry.getIntoNodePath().getParent())
+        #self.obstacles.remove(cEntry.getIntoNodePath().getParent())
         cEntry.getIntoNodePath().getParent().remove()
         
         self.hpText.destroy()
@@ -175,23 +172,23 @@ class Game(DirectObject):
         dt = task.time - self.prevTime
         
         if self.keyMap['left']: 
-            self.player.setH(self.player.getH() + dt*100)
+            self.players[self.playerID].setH(self.players[self.playerID].getH() + dt*100)
         if self.keyMap['right']:
-            self.player.setH(self.player.getH() - dt*100)
+            self.players[self.playerID].setH(self.players[self.playerID].getH() - dt*100)
         if self.keyMap['forward']:
             dist = 1
-            angle = deg2Rad(self.player.getH())
+            angle = deg2Rad(self.players[self.playerID].getH())
             dx = dist * math.sin(angle)
             dy = dist * -math.cos(angle)
-            self.player.setPos(self.player.getX() + dx, self.player.getY() + dy, self.player.getZ())
+            self.players[self.playerID].setPos(self.players[self.playerID].getX() + dx, self.players[self.playerID].getY() + dy, self.players[self.playerID].getZ())
         if self.keyMap['back']:
             dist = -1
-            angle = deg2Rad(self.player.getH())
+            angle = deg2Rad(self.players[self.playerID].getH())
             dx = dist * math.sin(angle)
             dy = dist * -math.cos(angle)
-            self.player.setPos(self.player.getX() + dx, self.player.getY() + dy, self.player.getZ())
+            self.players[self.playerID].setPos(self.players[self.playerID].getX() + dx, self.players[self.playerID].getY() + dy, self.players[self.playerID].getZ())
             
-        self.player.setZ(self.player.getZ()-0.1)
+        self.players[self.playerID].setZ(self.players[self.playerID].getZ()-0.1)
         
         return task.cont
         
@@ -200,13 +197,18 @@ class Game(DirectObject):
         
         #Sets the camera's position to the cameraPos (which was offset from self.player), and then makes the camera look at the player
         camera.setPos(self.cameraPos,0,0,0)
-        camera.lookAt(self.player)
+        camera.lookAt(self.players[self.playerID])
         
         return task.cont
         
     def rotate_camera_around(self,task):
         self.cameraRotParent.setH(task.time*60) #this will rotate it 60 degrees around the point every second
-        camera.lookAt(self.player)
+        if self.playerID == -1:
+            camera.lookAt(render)
+            
+        else:
+            camera.lookAt(self.players[self.playerID])
+            
         return task.cont
         
     def reparent_camera(self):
@@ -222,14 +224,14 @@ class Game(DirectObject):
         return task.cont
     
     def update_obstacles(self,task):
-        dt = task.time - self.prevTime
+        '''dt = task.time - self.prevTime
         
         for obstacle in self.obstacles:
             if obstacle.getName()=="electron":
                 obstacle.lookAt(self.player)
             if obstacle.getName()=="neutron":
                 pass
-        
+        '''
         return task.cont
         
     def update_terrain (self, task):
@@ -344,8 +346,12 @@ class ClientProtocol(Protocol):
         it = PyDatagramIterator(data)
         mssgID = it.getUint8()
         if mssgID == 42:
-            clientID = it.getInt8()
-            print clientID
+            self.clientID = it.getInt8()
+            self.game.playerID = self.clientID
+            self.game.cameraPos = self.game.players[self.game.playerID].attachNewNode("cameraPos")
+            self.game.players[self.game.playerID].setPos(0,0,0)
+            self.game.cameraPos.setPos(0,20,5)
+            print self.clientID
             return None
             
         
@@ -371,12 +377,12 @@ class ClientProtocol(Protocol):
         
         data.addUint8(13)
         data.addInt8(self.clientID)
-        data.addFloat32(self.game.player.getX())
-        data.addFloat32(self.game.player.getY())
-        data.addFloat32(self.game.player.getZ())
-        data.addFloat32(self.game.player.getH())
-        data.addFloat32(self.game.player.getP())
-        data.addFloat32(self.game.player.getR())
+        data.addFloat32(self.game.players[self.game.playerID].getX())
+        data.addFloat32(self.game.players[self.game.playerID].getY())
+        data.addFloat32(self.game.players[self.game.playerID].getZ())
+        data.addFloat32(self.game.players[self.game.playerID].getH())
+        data.addFloat32(self.game.players[self.game.playerID].getP())
+        data.addFloat32(self.game.players[self.game.playerID].getR())
         
         if self.game.keyMap['forward'] and not self.game.keyMap['back']:
             data.addFloat32(1.0)
