@@ -12,7 +12,7 @@ class Application(ShowBase):
         
         ShowBase.__init__(self)
         
-        server = Server(Protocol(self), 9999)
+        server = Server(Protocol(self), 9999,self)
         
         self.smiley = loader.loadModel("smiley")
         self.smiley.setPythonTag("velocity", 0)
@@ -94,13 +94,14 @@ class NetCommon:
 
 
 class Server(NetCommon):
-    def __init__(self, protocol, port):
+    def __init__(self, protocol, port,Server):
         NetCommon.__init__(self, protocol)
         self.listener = QueuedConnectionListener(self.manager, 0)
         socket = self.manager.openTCPServerRendezvous(port, 100)
         self.listener.addConnection(socket)
         self.connections = []
         self.smiley = ServerSmiley()
+        self.Server = Server
         self.frowney = loader.loadModel("frowney")
         self.frowney.reparentTo(render)
         taskMgr.add(self.updateListener, "updateListener")
@@ -130,6 +131,7 @@ class Server(NetCommon):
                 reply.addUint8(42)
                 reply.addInt8(self.tempClientID)
                 self.writer.send(reply,connection)
+                print "Giving new client ID: ",self.tempClientID
                 
                 
         return task.cont
@@ -140,9 +142,25 @@ class Server(NetCommon):
         return task.cont
         
     def syncSmiley(self, task):
+        for tempID in range(0,5):
+            sync = PyDatagram()
+            sync.addUint8(13)
+            sync.addInt8(tempID)
+            
+            sync.addFloat32(self.Server.players[tempID].getX())
+            sync.addFloat32(self.Server.players[tempID].getY())
+            sync.addFloat32(self.Server.players[tempID].getZ())
+            sync.addFloat32(self.Server.players[tempID].getH())
+            sync.addFloat32(self.Server.players[tempID].getP())
+            sync.addFloat32(self.Server.players[tempID].getR())
+            
+            #sync.addFloat32(float(self.Server.players[tempID].getTag("velocity")))
+            self.broadcast(sync)    
+            
+        return task.again
+        '''        
         print "SYNCING SMILEYS!"
-        sync = PyDatagram()
-        sync.addUint8(1)
+        
         sync.addFloat32(self.smiley.vel)
         sync.addFloat32(self.smiley.pos.getZ())
         print self.smiley.pos.getZ()
@@ -153,7 +171,7 @@ class Server(NetCommon):
         sync.addFloat32(777)
         self.broadcast(sync)
         return task.again
-    
+        '''   
     def broadcast(self, datagram):
         for conn in self.connections:
             self.writer.send(datagram, conn)
@@ -165,7 +183,7 @@ class Protocol:
         self.Application  = Application
         
     def process(self, data):
-        print "Got some data but not gonna do anything!"
+        print "Got some data"
         it = PyDatagramIterator(data)
         msgid = it.getUint8()
         
@@ -176,6 +194,7 @@ class Protocol:
         #standard update
         if msgid == 13:
             tempID = it.getInt8()
+            print "updating position for player ", tempID
             
             self.Application.players[tempID].setX(it.getFloat32())
             self.Application.players[tempID].setY(it.getFloat32())

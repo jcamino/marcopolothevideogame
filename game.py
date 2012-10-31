@@ -78,6 +78,7 @@ class Game(DirectObject):
             tempPlayer.setName(str(i))
             self.players.append(tempPlayer)
         
+        self.players[0].setPos(0,0,0)
         self.cameraPos = render.attachNewNode("cameraPos")
         self.cameraPos.setPos(0,20,5)
         camera.lookAt(render)
@@ -306,7 +307,7 @@ class NetCommon:
             reply = self.protocol.process(data)
         
             if reply != None:
-                print "Sending a reply"
+                #print "Sending a reply"
                 self.writer.send(reply, data.getConnection())
             else:
                 print "there wasn't a reply"
@@ -346,15 +347,30 @@ class ClientProtocol(Protocol):
         it = PyDatagramIterator(data)
         mssgID = it.getUint8()
         if mssgID == 42:
+        
             self.clientID = it.getInt8()
+           
             self.game.playerID = self.clientID
             self.game.cameraPos = self.game.players[self.game.playerID].attachNewNode("cameraPos")
+            self.game.players[0].setY(9999)
             self.game.players[self.game.playerID].setPos(0,0,0)
             self.game.cameraPos.setPos(0,20,5)
-            print self.clientID
-            return None
+            print "My player ID is ", self.clientID
+          
             
-        
+        elif mssgID == 13:
+            tempID = it.getInt8()
+            print "Server received ID is ", tempID , " locally stored ID ", self.clientID
+            if tempID != self.clientID:
+                moveInterval = self.game.players[tempID].posInterval(0.25,(it.getFloat32(),it.getFloat32(),it.getFloat32()))
+                hprInterval = self.game.players[tempID].hprInterval(0.25,(it.getFloat32(),it.getFloat32(),it.getFloat32()))
+                
+                moveInterval.start()
+                hprInterval.start()
+            
+            #self.game.players[tempID].setPythonTag("velocity",it.getFloat32())
+            
+        '''
         vel = it.getFloat32()
         z = it.getFloat32()
         x = it.getFloat32()
@@ -371,7 +387,7 @@ class ClientProtocol(Protocol):
         #self.smiley.setX(x)
         #self.smiley.setZ(z)
         #self.smiley.setY(y)
-        
+        '''
 
         data = PyDatagram()
         
