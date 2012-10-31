@@ -46,7 +46,7 @@ class Game(ShowBase):
 
     
         #Loads the plain, throws it into the scene graph and then scales it
-        self.terrain = loader.loadModel("models/Playground")
+        self.terrain = loader.loadModel("models/Playground2")
         self.terrain.reparentTo(render)
         self.terrain.setScale(1)
         self.terrain.setPos(0,0,0)
