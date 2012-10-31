@@ -362,12 +362,19 @@ class ClientProtocol(Protocol):
             tempID = it.getInt8()
             print "Server received ID is ", tempID , " locally stored ID ", self.clientID
             if tempID != self.clientID:
+                self.game.players[tempID].setX(it.getFloat32())
+                self.game.players[tempID].setY(it.getFloat32())
+                self.game.players[tempID].setZ(it.getFloat32())
+                self.game.players[tempID].setH(it.getFloat32())
+                self.game.players[tempID].setP(it.getFloat32())
+                self.game.players[tempID].setR(it.getFloat32())
+                '''
                 moveInterval = self.game.players[tempID].posInterval(0.25,(it.getFloat32(),it.getFloat32(),it.getFloat32()))
                 hprInterval = self.game.players[tempID].hprInterval(0.25,(it.getFloat32(),it.getFloat32(),it.getFloat32()))
                 
                 moveInterval.start()
                 hprInterval.start()
-            
+                '''
             #self.game.players[tempID].setPythonTag("velocity",it.getFloat32())
             
         '''
