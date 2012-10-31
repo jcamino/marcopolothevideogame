@@ -43,8 +43,8 @@ class Game(DirectObject):
         self.terrain.setPos(0,0,0)
 
         #startup connection
-        client = Client(ClientProtocol(self))
-        client.connect("192.168.2.18", 9999, 3000)
+        self.server = Client(ClientProtocol(self))
+        self.server.connect("192.168.2.18", 9999, 3000)
         
         #Adds the edges of the collider
         self.terrain = loader.loadModel("models/plain")
