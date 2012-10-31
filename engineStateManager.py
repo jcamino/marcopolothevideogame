@@ -58,10 +58,11 @@ class EngineFSM(FSM):
         self.engine.accept("escape", sys.exit)
         self.engine.accept("h",self.engine.toggle_headLights,[])
         
-        self.gameButton = DirectButton(text=("Go to Game", "Into the game!","You sure?", "disabled"))
-        self.gameButton['image_pos'] = (0.95,-0.95)
-        self.gameButton['command'] = self.request
-        self.gameButton['extraArgs'] = ['Game']
+        taskMgr.add(self.engine.rotate_camera_around, "rotateCameraTask", priority=1)
+        
+        self.engine.reparent_camera()
+        
+        self.gameButton = DirectButton(text=("Go to Game", "Into the game!","You sure?", "disabled"),text_scale=(0.2,0.2),text_pos=(0,0.5),relief=3,borderWidth=(0.05,0.05),command=self.request,extraArgs=['Game'])
         
     def exitMenu(self):
         self.engine.ignore("escape")

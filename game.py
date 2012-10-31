@@ -198,6 +198,18 @@ class Game(DirectObject):
         
         return task.cont
         
+    def rotate_camera_around(self,task):
+        self.cameraRotParent.setH(task.time*60) #this will rotate it 60 degrees around the point every second
+        camera.lookAt(self.player)
+        return task.cont
+        
+    def reparent_camera(self):
+        
+        self.cameraRotParent = render.attachNewNode("cameraRotNode")
+        
+        camera.wrtReparentTo(self.cameraRotParent) 
+        camera.setPos(0,-30,15) # 10 = distance between cam and point 
+        
     def update_prev_time(self,task):
         self.prevTime = task.time
         
