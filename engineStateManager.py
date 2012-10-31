@@ -33,6 +33,11 @@ class EngineFSM(FSM):
         self.engine.accept("proton-electron",self.engine.player_hit,[])
         
         self.engine.reset_keymap()
+        
+        self.winnerLabels = []
+        for i in range(0,5):
+            self.winnerLabels.append(DirectLabel(text=str(i),text_scale=(0.05,0.05),text_pos=(-0.9,1-0.2*i),relief=None))
+        
        
     def exitGame(self):
         taskMgr.remove("moveTask")
@@ -51,6 +56,8 @@ class EngineFSM(FSM):
         self.engine.ignore("arrow_down-up")
         self.engine.ignore("h")
         self.engine.ignore("proton-electron")
+        
+        self.engine.reset_keymap()
         
     def enterMenu(self):
         self.engine.accept("escape", sys.exit)
@@ -92,5 +99,26 @@ class EngineFSM(FSM):
                 self.demand('ServerSettings')
         
         self.engine.ignore("escape")
+        taskMgr.remove('rotateCameraTask')
         self.gameButton.destroy()
         self.ipEntry.destroy()
+        
+    def enterMarcoWins(self):
+        self.menuButton = DirectButton(text=("Go to Menu", "Into the menu!","You sure?", "disabled"),text_scale=(0.2,0.2),text_pos=(0,0.5),relief=3,borderWidth=(0.05,0.05),command=self.request,extraArgs=['Game'])
+        
+        self.winnerLabel = DirectLabel(text="Marco Won!",text_scale=(0.2,0.2),text_pos=(0,0.5),relief=3,borderWidth=(0.1,0.1))
+        
+        self.engine.accept("escape", sys.exit)
+        taskMgr.add(self.engine.rotate_camera_around, "rotateCameraTask", priority=1)
+        
+        self.engine.reparent_camera()
+        
+    def exitMarcoLoses(self):
+        self.menuButton.destroy()
+        self.winnerLabel.destroy()
+        self.engine.ignore("escape")
+        taskMgr.remove('rotateCameraTask')
+        
+    def inflate(self,winner):
+        self.winnerLabels[winner]['text_scale'] =(self.winnerLabels[winner]['text_scale'][0]*1.005,self.winnerLabels[winner]['text_scale'][1]*1.005)
+        

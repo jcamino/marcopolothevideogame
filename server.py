@@ -3,7 +3,7 @@ from panda3d.core import *
 from direct.distributed.PyDatagram import PyDatagram
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
 from time import time
-import random
+import random, math
 
 direction = {1: -1, 2: -1, 3:-1, 4:-1, 5:-1}
 
@@ -108,8 +108,35 @@ class Server(NetCommon):
         self.frowney = loader.loadModel("frowney")
         self.frowney.reparentTo(render)
         taskMgr.doMethodLater(.25, self.updateListener, "updateListener")
+        
         #taskMgr.add(self.updateSmiley, "updateSmiley")
         taskMgr.doMethodLater(0.25, self.syncSmiley, "syncSmiley")
+        taskMgr.doMethodLater(0.25,self.update_winner, "updateWinnerTask")
+        
+    def update_winner(self,task):
+        closest=0
+        closestDist = 999999
+        for i in range(0,len(self.Server.players)):
+            if self.Server.players[i].getName()!='0':
+                x=self.Server.players[i].getX()
+                y=self.Server.players[i].getY()
+                z=self.Server.players[i].getZ()
+                mx=self.Server.players[0].getX()
+                my=self.Server.players[0].getY()
+                mz=self.Server.players[0].getZ()
+                dist=math.sqrt((x-mx)**2+(y-my)**2+(z-mz)**2)
+                if dist <closestDist:
+                    closest = i
+                    closestDist=dist
+                    
+        
+        update = PyDatagram()
+        update.addUint8(101)
+        
+        update.addInt8(closest)
+        self.broadcast(update)
+        return task.cont
+        
         
     def updateListener(self, task):
         if self.listener.newConnectionAvailable():
@@ -210,6 +237,12 @@ class Protocol:
             self.Application.players[tempID].setPythonTag("velocity",it.getFloat32())
             #self.printMessage("Server received:", direction[2])        
         
+        
+        elif msgid == 38:
+            print "Game over"
+            data = PyDatagram
+            data.addInt8(38)
+            self.broadcast(data)
         '''if msgid == 3:
             direction['3']=it.getString()
            3 self.printMessage("Server received:", direction['3'])  

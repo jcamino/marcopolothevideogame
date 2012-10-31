@@ -33,7 +33,8 @@ class Game(DirectObject):
         self.hpPrompt = OnscreenText(text = 'HitPoints:', pos = (-0.55, -0.2), scale = 0.07)
         self.hpText = OnscreenText(text = str(10-self.playerHits), pos = (-0.35, -0.2), scale = 0.07)
         
-       
+        self.marco = False
+        
     def load_assets(self):
 
     
@@ -151,6 +152,13 @@ class Game(DirectObject):
             self.stateManager.request('Game')
             
     def player_hit (self, cEntry):
+        if cEntry.getName() == 'player0':
+            data = PyDatagram()
+            data.addInt8(38)
+            self.server.send(data)
+            
+            
+            
         self.playerHits += 1
         #self.obstacles.remove(cEntry.getIntoNodePath().getParent())
         cEntry.getIntoNodePath().getParent().remove()
@@ -367,7 +375,14 @@ class ClientProtocol(Protocol):
                 moveInterval.start()
                 hprInterval.start()
                 
-            #self.game.players[tempID].setPythonTag("velocity",it.getFloat32())
+      
+              #self.game.players[tempID].setPythonTag("velocity",it.getFloat32())
+            
+        elif mssgID == 38:
+            print "Game over"
+            
+        elif mssgID == 101:
+            self.game.stateManager.inflate(it.getInt8()-1)
             
         '''
         vel = it.getFloat32()
