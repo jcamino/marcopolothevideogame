@@ -218,7 +218,9 @@ class Server(NetCommon):
             sync.addFloat32(self.Server.players[tempID].getP())
             sync.addFloat32(self.Server.players[tempID].getR())
             
-            #sync.addFloat32(float(self.Server.players[tempID].getTag("velocity")))
+            print "The velocity is ", self.Server.players[tempID].getTag("velocity")
+            
+            sync.addFloat32(1.0) #sync.addFloat32(float(self.Server.players[tempID].getTag("velocity")))
             self.broadcast(sync)    
             
         return task.again
@@ -255,6 +257,11 @@ class Protocol:
             direction['1']=it.getString()
             #self.printMessage("Server received:", direction['1'])
         
+        if msgid == 23:
+            print "server got shout out"
+            update = PyDatagram()
+            update.addUint8(23)
+            self.Application.server.broadcast(update)
         #standard update
         if msgid == 13:
             tempID = it.getInt8()

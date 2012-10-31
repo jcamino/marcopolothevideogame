@@ -13,7 +13,7 @@ void vshader(float4 vtx_position : POSITION,
 float linearZ(uniform sampler2D tex, float2 uv)
 {
     float near = 1.0;
-    float far = 300.0;
+    float far = 200.0;
     float z = tex2D(tex, uv);
     return (2.0 * near) / (far + near - z * (far - near));
 }
@@ -25,7 +25,7 @@ void fshader(float2 l_texcoord : TEXCOORD0,
              out float4 o_color : COLOR)
 {
     float z_max = 0.3;
-    float z_min = 0.16;
+    float z_min = 0.01;
     float z = linearZ(k_depth, l_texcoord);
 
     float4 color = z > z_max ? tex2D(k_blur, l_texcoord) : z < z_min ? tex2D(k_blur, l_texcoord) : tex2D(k_color, l_texcoord);

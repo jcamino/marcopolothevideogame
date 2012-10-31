@@ -7,8 +7,10 @@ from direct.task import Task #for update functions
 from direct.gui.OnscreenText import OnscreenText
 from direct.gui.DirectGui import *
 from direct.filter.FilterManager import *
+from direct.actor.Actor import Actor
 from direct.distributed.PyDatagram import PyDatagram 
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
+from direct.showbase import Audio3DManager
 import math, sys, random, socket
 import engineStateManager
 
@@ -26,8 +28,16 @@ class Game(ShowBase):
         self.stateManager.request('Menu')
         self.accept("p",self.printText,[self.stateManager.state])
         
+        
+        self.audio3d = Audio3DManager.Audio3DManager(base.sfxManagerList[0],camera)
+        self.marcoSound = self.audio3d.loadSfx('models/boymarco1.wav')
+        self.poloSounds = []
+        for i in range(0,5):
+            self.poloSounds.append(self.audio3d.loadSfx('models/boypolo1.wav'))
+            
         self.load_assets()
         self.setup_collision()
+        
         
         
         self.marco = False
@@ -51,21 +61,32 @@ class Game(ShowBase):
         
         for i in range (0,5):
             if i == 0:
-                tempPlayer = loader.loadModel('models/Le-a_Default_Anim')
+                tempPlayer = Actor('models/Le-a_Default_Anim',{"run":"models/Le-a_Run_Anim"})
+                self.audio3d.attachSoundToObject(self.marcoSound,tempPlayer)
             elif i == 1:
-                tempPlayer = loader.loadModel('models/Girl Lin Default')
+                tempPlayer = Actor('models/Girl Lin Default',{"run":"models/Girl Lin Run"})
+                self.audio3d.attachSoundToObject(self.poloSounds[i],tempPlayer)
             elif i == 2:
-                tempPlayer = loader.loadModel('models/Gus_default_Anim')
+                tempPlayer = Actor('models/Gus_default_Anim',{"run":"models/Gus_Run_Anim"})
+                self.audio3d.attachSoundToObject(self.poloSounds[i],tempPlayer)
+
             elif i == 3:
-                tempPlayer = loader.loadModel('models/Tony_Default_Anim')
+                tempPlayer = Actor('models/Tony_Default_Anim',{"run":"models/Tony_Run_Anim"})
+                self.audio3d.attachSoundToObject(self.poloSounds[i],tempPlayer)
+
             elif i == 4:
-                tempPlayer = loader.loadModel('models/Le-a_Default_Anim')
+                tempPlayer = Actor('models/Le-a_Default_Anim',{"run":"models/Le-a_Run_Anim"})
+                self.audio3d.attachSoundToObject(self.poloSounds[i],tempPlayer)
+
             else:
-                tempPlayer = loader.loadModel('models/Le-a_Default_Anim')
+                tempPlayer = Actor('models/Le-a_Default_Anim',{"run":"models/Le-a_Run_Anim"})
+                self.audio3d.attachSoundToObject(self.poloSounds[i],tempPlayer)
+
             tempPlayer.reparentTo(render)
             tempPlayer.setScale(0.25)
             tempPlayer.setY(9999)
             tempPlayer.setName(str(i))
+            tempPlayer.loop("run")
             self.players.append(tempPlayer)
         
         self.players[0].setPos(0,0,0)
@@ -121,19 +142,23 @@ blurTex, div = 4)
         
         for player in self.players:
             cNode = CollisionNode(player.getName())
-            cNode.addSolid(CollisionSphere((0,0,3),3))
-            cNode.setFromCollideMask(0x1)
-            
+            cNode.addSolid(CollisionSphere((0,0,3),5))
+                   
             cNodePath = player.attachNewNode(cNode)
         
             base.cTrav.addCollider(cNodePath,self.pusher)
             self.pusher.addCollider(cNodePath, player)
+            cNodePath.show()
         
         #Sets up collision for the terrain
         cNode = CollisionNode("terrain")
         cNode.addSolid(CollisionPlane(Plane()))
         render.attachNewNode(cNode)
-        self.terrain.node().setIntoCollideMask(0x1)
+        
+        self.playgroundCollision = loader.loadModel('models/collision solids')
+        #self.pusher.addCollider(self.playgroundCollision,self.players[1])
+        self.playgroundCollision.show()
+        #self.playgroundCollision = loader.loadModel("models/Playground")
         
         cNode = CollisionNode("terrainleft")
         cNode.addSolid(CollisionPlane(Plane(Vec3(1,0,0),Point3(-30,0,0))))
@@ -156,8 +181,17 @@ blurTex, div = 4)
             base.cTrav.addCollider(cNodePath,self.pusher)
             self.pusher.addCollider(cNodePath, obstacle)
         '''
-        
+    
+    def shout(self):
+        print "trying to shout"
+        if self.playerID == 0:
+            print "is marco, so shouting"
+            update = PyDatagram()
+            update.addUint8(23)
+            self.server.send(update)
+            
     def toggle_headLights(self):
+       
         if self.stateManager.state == 'Game':
             self.stateManager.request('Menu')
         else:
@@ -173,7 +207,7 @@ blurTex, div = 4)
         
         if self.keyMap['left']: 
             self.players[self.playerID].setH(self.players[self.playerID].getH() + dt*100)
-        if self.keyMap['right']:
+        if self.keyMap['right']: 
             self.players[self.playerID].setH(self.players[self.playerID].getH() - dt*100)
         if self.keyMap['forward']:
             dist = 1
@@ -350,12 +384,18 @@ class ClientProtocol(Protocol):
             self.game.playerID = self.clientID
             self.game.cameraPos = self.game.players[self.game.playerID].attachNewNode("cameraPos")
             self.game.players[0].setY(9999)
-            self.game.players[self.game.playerID].setPos(0,0,0)
+            self.game.players[self.game.playerID].setPos(0,0,30)
             self.game.cameraPos.setPos(0,40,15)
             if self.clientID == 0:
                 self.game.setupPostFx()
             print "My player ID is ", self.clientID
           
+        elif mssgID == 23:
+            print "playing all the sounds!"
+            for sound in self.game.poloSounds:
+                sound.play()
+            self.game.marcoSound.play()
+            
             
         elif mssgID == 13:
             tempID = it.getInt8()
@@ -371,10 +411,16 @@ class ClientProtocol(Protocol):
                 self.game.players[tempID].setR(it.getFloat32())
                 '''
                 moveInterval = self.game.players[tempID].posInterval(0.25,(it.getFloat32(),it.getFloat32(),it.getFloat32()))
+                
                 hprInterval = self.game.players[tempID].hprInterval(0.25,(it.getFloat32(),it.getFloat32(),it.getFloat32()))
                 
                 moveInterval.start()
                 hprInterval.start()
+                vel = it.getFloat32()
+                if vel>0:
+                    self.game.players[tempID].loop("run")
+                else:
+                    self.game.players[tempID].stop()
                 
       
               #self.game.players[tempID].setPythonTag("velocity",it.getFloat32())
