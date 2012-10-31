@@ -338,8 +338,8 @@ class ClientProtocol(Protocol):
         #" Z position:" , z , " Checksum " , checksum
         
         newx = x
-        zdiff = z - self.smiley.getZ()
-        self.smiley.setPythonTag("velocity", vel + zdiff * 0.03)
+        #zdiff = z - self.smiley.getZ()
+        #self.smiley.setPythonTag("velocity", vel + zdiff * 0.03)
         
         #self.smiley.setX(x)
         #self.smiley.setZ(z)
