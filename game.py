@@ -298,7 +298,7 @@ class NetCommon:
         self.reader = QueuedConnectionReader(self.manager, 0)
         self.writer = ConnectionWriter(self.manager, 0)
         self.protocol = protocol
-        taskMgr.add(self.updateReader, "updateReader")
+        taskMgr.doMethodLater(0.25,self.updateReader, "updateReader")
         
     def updateReader(self, task):
         if self.reader.dataAvailable():
@@ -322,6 +322,7 @@ class Client(NetCommon):
     
     def connect(self, host, port, timeout):
         self.connection = self.manager.openTCPClientConnection(host, port, timeout)
+        self.connection.setNoDelay(True)
         if self.connection:
             self.reader.addConnection(self.connection)
             print "Client: Connected to server."
@@ -362,6 +363,8 @@ class ClientProtocol(Protocol):
             tempID = it.getInt8()
             print "Server received ID is ", tempID , " locally stored ID ", self.clientID
             if tempID != self.clientID:
+            
+                '''
                 self.game.players[tempID].setX(it.getFloat32())
                 self.game.players[tempID].setY(it.getFloat32())
                 self.game.players[tempID].setZ(it.getFloat32())
@@ -374,7 +377,7 @@ class ClientProtocol(Protocol):
                 
                 moveInterval.start()
                 hprInterval.start()
-                '''
+                
             #self.game.players[tempID].setPythonTag("velocity",it.getFloat32())
             
         '''

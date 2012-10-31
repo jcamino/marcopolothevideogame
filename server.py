@@ -9,6 +9,8 @@ direction = {1: -1, 2: -1, 3:-1, 4:-1, 5:-1}
 
 class Application(ShowBase):
     def __init__(self):
+    
+        
         
         ShowBase.__init__(self)
         
@@ -55,7 +57,7 @@ class Application(ShowBase):
             client.send(reply)
         '''
         
-        taskMgr.add(self.updateSmiley, "updateSmiley")
+        #taskMgr.add(self.updateSmiley, "updateSmiley")
         
         
         
@@ -79,7 +81,7 @@ class NetCommon:
         self.reader = QueuedConnectionReader(self.manager, 0)
         self.writer = ConnectionWriter(self.manager, 0)
         self.protocol = protocol
-        taskMgr.add(self.updateReader, "updateReader")
+        taskMgr.doMethodLater(0.25,self.updateReader, "updateReader")
         
     def updateReader(self, task):
         if self.reader.dataAvailable():
@@ -97,15 +99,16 @@ class Server(NetCommon):
     def __init__(self, protocol, port,Server):
         NetCommon.__init__(self, protocol)
         self.listener = QueuedConnectionListener(self.manager, 0)
-        socket = self.manager.openTCPServerRendezvous(port, 100)
+        socket = self.manager.openTCPServerRendezvous(port, 15)
+        
         self.listener.addConnection(socket)
         self.connections = []
         self.smiley = ServerSmiley()
         self.Server = Server
         self.frowney = loader.loadModel("frowney")
         self.frowney.reparentTo(render)
-        taskMgr.add(self.updateListener, "updateListener")
-        taskMgr.add(self.updateSmiley, "updateSmiley")
+        taskMgr.doMethodLater(.25, self.updateListener, "updateListener")
+        #taskMgr.add(self.updateSmiley, "updateSmiley")
         taskMgr.doMethodLater(0.25, self.syncSmiley, "syncSmiley")
         
     def updateListener(self, task):
@@ -113,6 +116,7 @@ class Server(NetCommon):
             connection = PointerToConnection()
             if self.listener.getNewConnection(connection):
                 connection = connection.p()
+                connection.setNoDelay(True)
                 self.connections.append(connection)
                 self.reader.addConnection(connection)
                 print "Server: New connection established."
