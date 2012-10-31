@@ -1,11 +1,13 @@
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import *
+from direct.gui.OnscreenText import OnscreenText
+from direct.gui.DirectGui import *
 from direct.distributed.PyDatagram import PyDatagram
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
 from time import time
 import random, math
 
-direction = {1: -1, 2: -1, 3:-1, 4:-1, 5:-1}
+direction = {0:-1, 1: -1, 2: -1, 3:-1, 4:-1, 5:-1}
 
 class Application(ShowBase):
     def __init__(self):
@@ -114,7 +116,12 @@ class Server(NetCommon):
             self.poloScores.append(0.0)
         #taskMgr.add(self.updateSmiley, "updateSmiley")
         taskMgr.doMethodLater(0.25, self.syncSmiley, "syncSmiley")
+        self.startButton = DirectButton(text=('START','START','START','disabled'), text_bg=(1.0,0.1,0.1,1.0),text_pos=(0,-0.5),command=self.start) 
+        
+    def start(self):
         taskMgr.doMethodLater(0.25,self.update_winner, "updateWinnerTask")
+        self.startButton.destroy()
+        
         
     def update_winner(self,task):
         closest=0
@@ -128,6 +135,8 @@ class Server(NetCommon):
                 my=self.Server.players[0].getY()
                 mz=self.Server.players[0].getZ()
                 dist=math.sqrt((x-mx)**2+(y-my)**2+(z-mz)**2)
+                
+                print i, dist
                 if dist <closestDist:
                     closest = i
                     closestDist=dist
@@ -155,7 +164,7 @@ class Server(NetCommon):
                 print "Server: New connection established."
 
                 self.tempClientID = -1
-                for client in range(1,len(direction)):
+                for client in range(0,len(direction)):
                     if direction[client] == -1:
                         direction[client] = 0
                         print "Client ID ",client

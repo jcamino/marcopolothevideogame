@@ -319,8 +319,9 @@ class Client(NetCommon):
     
     def connect(self, host, port, timeout):
         self.connection = self.manager.openTCPClientConnection(host, port, timeout)
-        self.connection.setNoDelay(True)
+        
         if self.connection:
+            self.connection.setNoDelay(True)
             self.reader.addConnection(self.connection)
             print "Client: Connected to server."
             return True
