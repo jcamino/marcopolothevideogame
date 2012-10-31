@@ -366,6 +366,7 @@ class ClientProtocol(Protocol):
         elif mssgID == 39:
             print "Marco lost"
             winner = it.getInt8()
+            self.game.stateManager.declareWinner(winner)
             
             
         elif mssgID == 101:

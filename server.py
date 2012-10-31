@@ -16,7 +16,7 @@ class Application(ShowBase):
         
         ShowBase.__init__(self)
         
-        server = Server(Protocol(self), 9999,self)
+        self.server = Server(Protocol(self), 9999,self)
         
         self.smiley = loader.loadModel("smiley")
         self.smiley.setPythonTag("velocity", 0)
@@ -118,28 +118,38 @@ class Server(NetCommon):
         taskMgr.doMethodLater(0.25, self.syncSmiley, "syncSmiley")
         self.startButton = DirectButton(text=('START','START','START','disabled'), text_bg=(1.0,0.1,0.1,1.0),text_pos=(0,-0.5),command=self.start) 
         
+    def MarcoLoses(self):
+        update = PyDatagram()
+        update.addUint8(39)
+        winner = 1
+        for i in range(1,len(self.Server.players)):
+            if self.poloScores[i]>self.poloScores[winner]:
+                winner = i
+                    
+        update.addUint8(winner)
+        
     def start(self):
         taskMgr.doMethodLater(0.25,self.update_winner, "updateWinnerTask")
+        taskMgr.doMethodLater(60,self.MarcoLoses,"marcoLosestask")
         self.startButton.destroy()
         
         
     def update_winner(self,task):
         closest=0
         closestDist = 999999
-        for i in range(0,len(self.Server.players)):
-            if self.Server.players[i].getName()!='0':
-                x=self.Server.players[i].getX()
-                y=self.Server.players[i].getY()
-                z=self.Server.players[i].getZ()
-                mx=self.Server.players[0].getX()
-                my=self.Server.players[0].getY()
-                mz=self.Server.players[0].getZ()
-                dist=math.sqrt((x-mx)**2+(y-my)**2+(z-mz)**2)
-                
-                print i, dist
-                if dist <closestDist:
-                    closest = i
-                    closestDist=dist
+        for i in range(1,len(self.Server.players)):
+            x=self.Server.players[i].getX()
+            y=self.Server.players[i].getY()
+            z=self.Server.players[i].getZ()
+            mx=self.Server.players[0].getX()
+            my=self.Server.players[0].getY()
+            mz=self.Server.players[0].getZ()
+            dist=math.sqrt((x-mx)**2+(y-my)**2+(z-mz)**2)
+            
+            print i, dist
+            if dist <closestDist:
+                closest = i
+                closestDist=dist
                     
         print closest, " is the closest"
         self.poloScores[closest]+=100.0/24.0/10000.0
@@ -257,7 +267,7 @@ class Protocol:
             print "Game over"
             data = PyDatagram()
             data.addInt8(38)
-            Application.server.broadcast(data)
+            self.Application.server.broadcast(data)
         '''if msgid == 3:
             direction['3']=it.getString()
            3 self.printMessage("Server received:", direction['3'])  

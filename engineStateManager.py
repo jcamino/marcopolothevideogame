@@ -104,9 +104,31 @@ class EngineFSM(FSM):
         self.ipEntry.destroy()
         
     def enterMarcoWins(self):
-        self.menuButton = DirectButton(text=("Go to Menu", "Into the menu!","You sure?", "disabled"),text_scale=(0.2,0.2),text_pos=(0,0.5),relief=3,borderWidth=(0.05,0.05),command=self.request,extraArgs=['Game'])
+        self.menuButton = DirectButton(text=("Go to Menu", "Into the menu!","You sure?", "disabled"),text_scale=(0.2,0.2),text_pos=(0,0.5),relief=3,borderWidth=(0.05,0.05),command=self.request,extraArgs=['Menu'])
         
         self.winnerLabel = DirectLabel(text="Marco Won!",text_scale=(0.2,0.2),text_pos=(0,0.5),relief=3,borderWidth=(0.1,0.1))
+        
+        self.engine.accept("escape", sys.exit)
+        taskMgr.add(self.engine.rotate_camera_around, "rotateCameraTask", priority=1)
+        
+        self.engine.reparent_camera()
+        
+    def exitMarcoLoses(self):
+        self.menuButton.destroy()
+        self.winnerLabel.destroy()
+        self.engine.ignore("escape")
+        taskMgr.remove('rotateCameraTask')
+    
+    
+    
+    def declareWinner(self,winner):
+        self.winner = winner
+        self.request('MarcoLoses')
+        
+    def enterMarcoLoses(self):
+        self.menuButton = DirectButton(text=("Go to Menu", "Into the menu!","You sure?", "disabled"),text_scale=(0.2,0.2),text_pos=(0,0.5),relief=3,borderWidth=(0.05,0.05),command=self.request,extraArgs=['Menu'])
+        
+        self.winnerLabel = DirectLabel(text="Marco Lost!, the winner is "+str(self.winner),text_scale=(0.2,0.2),text_pos=(0,0.5),relief=3,borderWidth=(0.1,0.1))
         
         self.engine.accept("escape", sys.exit)
         taskMgr.add(self.engine.rotate_camera_around, "rotateCameraTask", priority=1)
@@ -118,6 +140,8 @@ class EngineFSM(FSM):
         self.winnerLabel.destroy()
         self.engine.ignore("escape")
         taskMgr.remove('rotateCameraTask')
+
+
         
     def inflate(self,scores):
         for i in range(0,5):
