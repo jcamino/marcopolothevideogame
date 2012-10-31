@@ -5,7 +5,7 @@ from direct.distributed.PyDatagramIterator import PyDatagramIterator
 from time import time
 import random
 
-direction = {'1': -1, '2': -1,'3':-1,'4':-1,'5':-1}
+direction = {1: -1, 2: -1, 3:-1, 4:-1, 5:-1}
 
 class Application(ShowBase):
     def __init__(self):
@@ -108,7 +108,7 @@ class Server(NetCommon):
                 print "Server: New connection established."
 
                 self.tempClientID = -1
-                for client in direction:
+                for client in range(1,len(direction)):
                     if direction[client] == -1:
                         direction[client] = 0
                         print "Client ID ",client
@@ -119,7 +119,7 @@ class Server(NetCommon):
                     
                 reply = PyDatagram()
                 reply.addUint8(42)
-                reply.addUint8(self.tempClientID)
+                reply.addInt8(self.tempClientID)
                 self.writer.send(reply,connection)
                 
                 

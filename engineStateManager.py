@@ -34,7 +34,7 @@ class EngineFSM(FSM):
         self.engine.accept("proton-electron",self.engine.player_hit,[])
         
         self.engine.reset_keymap()
-        
+       
     def exitGame(self):
         taskMgr.remove("moveTask")
         taskMgr.remove("cameraTask")
@@ -56,7 +56,6 @@ class EngineFSM(FSM):
         
     def enterMenu(self):
         self.engine.accept("escape", sys.exit)
-        self.engine.accept("h",self.engine.toggle_headLights,[])
         
         taskMgr.add(self.engine.rotate_camera_around, "rotateCameraTask", priority=1)
         
@@ -64,7 +63,36 @@ class EngineFSM(FSM):
         
         self.gameButton = DirectButton(text=("Go to Game", "Into the game!","You sure?", "disabled"),text_scale=(0.2,0.2),text_pos=(0,0.5),relief=3,borderWidth=(0.05,0.05),command=self.request,extraArgs=['Game'])
         
+        
+        self.multiPlayerButton = DirectButton(text=("Server Settings", "Server Settings","Server Settings", "disabled"),text_scale=(0.2,0.2),text_pos=(0,-0.5),relief=3,borderWidth=(0.05,0.05),command=self.request,extraArgs=['ServerSettings'])
+
     def exitMenu(self):
         self.engine.ignore("escape")
-        self.engine.ignore("h")
         self.gameButton.destroy()
+        self.multiPlayerButton.destroy()
+        taskMgr.remove('rotateCameraTask')
+        
+        
+    def enterServerSettings(self):
+    
+        self.engine.accept("escape", sys.exit)
+        taskMgr.add(self.engine.rotate_camera_around, "rotateCameraTask", priority=1)
+        
+        self.engine.reparent_camera()
+                
+        def clearText():
+            self.ipEntry.enterText('')
+        self.ipEntry = DirectEntry(initialText='Enter IP Address of Server', numLines=1,text_scale = (0.2,0.2),text_pos=(-1.0,-0.5),focus=0,focusInCommand=clearText)
+        
+
+        self.gameButton = DirectButton(text=("Go to Game", "Into the game!","You sure?", "disabled"),text_scale=(0.2,0.2),text_pos=(0,0.5),relief=3,borderWidth=(0.05,0.05),command=self.request,extraArgs=['Game'])
+        
+   
+    def exitServerSettings(self):
+        if self.newState == 'Game':
+            if not self.engine.connect_ip(self.ipEntry.get()):
+                self.demand('ServerSettings')
+        
+        self.engine.ignore("escape")
+        self.gameButton.destroy()
+        self.ipEntry.destroy()

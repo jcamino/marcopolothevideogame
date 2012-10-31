@@ -10,6 +10,8 @@ from direct.distributed.PyDatagram import PyDatagram
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
 import math, sys, random, socket
 import engineStateManager
+clientID = -1
+
 
 class Game(DirectObject):
     
@@ -44,7 +46,7 @@ class Game(DirectObject):
 
         #startup connection
         self.server = Client(ClientProtocol(self))
-        self.server.connect("192.168.2.18", 9999, 3000)
+        
         
         #Adds the edges of the collider
         self.terrain = loader.loadModel("models/plain")
@@ -256,7 +258,20 @@ class Game(DirectObject):
         
     def printText(self,string):
         print string
-
+    
+    
+    def connect_ip(self,ip):
+        print 'IP = ' , ip
+        try:
+            socket.inet_aton(ip)
+            print "Looks like a valid IP, let's connect!"
+            return self.server.connect(ip, 9999, 3000)
+            
+        except socket.error:
+            print "That doesn't look like a valid IP to me"
+        
+        return False
+       
         
            
         
@@ -308,6 +323,8 @@ class Client(NetCommon):
         if self.connection:
             self.reader.addConnection(self.connection)
             print "Client: Connected to server."
+            return True
+        return False
             
     def send(self, datagram):
         if self.connection:
@@ -327,7 +344,10 @@ class ClientProtocol(Protocol):
         it = PyDatagramIterator(data)
         mssgID = it.getUint8()
         if mssgID == 42:
+            clientID = it.getInt8()
+            print clientID
             return None
+            
         vel = it.getFloat32()
         z = it.getFloat32()
         x = it.getFloat32()
@@ -350,7 +370,7 @@ class ClientProtocol(Protocol):
         data.addUint8(0)
         data.addString("w") #change this to key being pressed forward
         
-        
+        print "in ClientProtocol.process()"
         data.addString("OH HI MARTK!!")
         
         
