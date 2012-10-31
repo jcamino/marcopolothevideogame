@@ -255,9 +255,9 @@ class Protocol:
         
         elif msgid == 38:
             print "Game over"
-            data = PyDatagram
+            data = PyDatagram()
             data.addInt8(38)
-            self.broadcast(data)
+            Application.server.broadcast(data)
         '''if msgid == 3:
             direction['3']=it.getString()
            3 self.printMessage("Server received:", direction['3'])  
