@@ -120,7 +120,6 @@ class EngineFSM(FSM):
         taskMgr.remove('rotateCameraTask')
     
     
-    
     def declareWinner(self,winner):
         self.winner = winner
         self.request('MarcoLoses')

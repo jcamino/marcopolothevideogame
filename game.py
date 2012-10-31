@@ -1,4 +1,4 @@
-import direct.directbase.DirectStart #starts Panda
+import direct.showbase.ShowBase import ShowBase#starts Panda
 from pandac.PandaModules import * #basic Panda modules
 from direct.showbase.DirectObject import DirectObject #for event handling
 from direct.actor.Actor import Actor #for animated models
@@ -6,13 +6,14 @@ from direct.interval.IntervalGlobal import * #for compound intervals
 from direct.task import Task #for update functions
 from direct.gui.OnscreenText import OnscreenText
 from direct.gui.DirectGui import *
+from direct.filter.FilterManager import *
 from direct.distributed.PyDatagram import PyDatagram 
 from direct.distributed.PyDatagramIterator import PyDatagramIterator
 import math, sys, random, socket
 import engineStateManager
 
 
-class Game(DirectObject):
+class Game(ShowBase):
     
     def __init__ (self):
         #Allows custom camera positioning
@@ -94,6 +95,21 @@ class Game(DirectObject):
         self.directionalLightSource.setColor((0.6,0.4,0.5,1.0))
         render.setLight(render.attachNewNode(self.directionalLightSource))
         
+    def setupPostFx(self):
+        self.filterMan = FilterManager(base.win, camera)
+        colorTex = Texture()
+        blurTex = Texture()
+        depthTex = Texture()
+        finalQuad = self.filterMan.renderSceneInto(colortex = 
+colorTex, depthtex = depthTex)
+        blurQuad = self.filterMan.renderQuadInto(colortex = 
+blurTex, div = 4)
+        blurQuad.setShader(loader.loadShader("blur.cg"))
+        blurQuad.setShaderInput("color", colorTex)
+        finalQuad.setShader(loader.loadShader("depth.cg"))
+        finalQuad.setShaderInput("color", colorTex)
+        finalQuad.setShaderInput("blur", blurTex)
+        finalQuad.setShaderInput("depth", depthTex)
     
     def setup_collision(self):
         #Starts by setting up Collision detection stuff
@@ -229,6 +245,7 @@ class Game(DirectObject):
                 self.stateManager.request('Menu')
                 
                 
+                
     def reset_keymap(self):
         self.keyMap = {"left":False, "right":False, "forward":False, "back":False}
             
@@ -334,6 +351,8 @@ class ClientProtocol(Protocol):
             self.game.players[0].setY(9999)
             self.game.players[self.game.playerID].setPos(0,0,0)
             self.game.cameraPos.setPos(0,40,15)
+            if self.clientID == 0:
+                self.game.setupPostFx()
             print "My player ID is ", self.clientID
           
             
