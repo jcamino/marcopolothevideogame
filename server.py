@@ -121,6 +121,7 @@ class Server(NetCommon):
         self.startButton = DirectButton(text=('START','START','START','disabled'), text_bg=(1.0,0.1,0.1,1.0),text_pos=(0,-0.5),command=self.start) 
         
     def MarcoLoses(self,task):
+        print self.isStarted
         if self.isStarted:
             update = PyDatagram()
             update.addUint8(39)
@@ -130,7 +131,7 @@ class Server(NetCommon):
                     winner = i
                         
             update.addUint8(winner)
-            
+            self.broadcast(update)
         return task.cont
             
         
@@ -218,7 +219,7 @@ class Server(NetCommon):
             sync.addFloat32(self.Server.players[tempID].getP())
             sync.addFloat32(self.Server.players[tempID].getR())
             
-            print "The velocity is ", self.Server.players[tempID].getTag("velocity")
+            #print "The velocity is ", self.Server.players[tempID].getTag("velocity")
             
             sync.addFloat32(1.0) #sync.addFloat32(float(self.Server.players[tempID].getTag("velocity")))
             self.broadcast(sync)    

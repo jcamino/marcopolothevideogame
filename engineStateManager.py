@@ -31,7 +31,7 @@ class EngineFSM(FSM):
         self.engine.accept("arrow_down-up", self.engine.setKey, ["back", False])
         self.engine.accept("h",self.engine.toggle_headLights,[])
         self.engine.accept("s",self.engine.shout,[])
-        self.engine.accept("0",self.engine.player_hit,[])
+        self.engine.accept("0",self.engine.player_hit)
         
         self.engine.reset_keymap()
         

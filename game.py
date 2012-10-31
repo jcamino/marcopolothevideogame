@@ -148,7 +148,7 @@ blurTex, div = 4)
         
             base.cTrav.addCollider(cNodePath,self.pusher)
             self.pusher.addCollider(cNodePath, player)
-            cNodePath.show()
+            #cNodePath.show()
         
         #Sets up collision for the terrain
         cNode = CollisionNode("terrain")
@@ -157,7 +157,7 @@ blurTex, div = 4)
         
         self.playgroundCollision = loader.loadModel('models/collision solids')
         #self.pusher.addCollider(self.playgroundCollision,self.players[1])
-        self.playgroundCollision.show()
+        #self.playgroundCollision.show()
         #self.playgroundCollision = loader.loadModel("models/Playground")
         
         cNode = CollisionNode("terrainleft")
